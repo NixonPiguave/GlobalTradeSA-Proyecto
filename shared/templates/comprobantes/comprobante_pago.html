@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="section">
+  <h2>Datos del pago</h2>
+  <div class="info-grid">
+    <div><strong>Cliente:</strong> {{ cliente.empresa }}</div>
+    <div><strong>Método:</strong> {{ pago.metodo }}</div>
+    <div><strong>Pedido:</strong> {{ pedido.numero }}</div>
+    <div><strong>Referencia:</strong> {{ pago.referencia or '—' }}</div>
+    <div><strong>Estado:</strong> {{ pago.estado }}</div>
+    <div><strong>Monto pagado:</strong> {{ monto_fmt }}</div>
+  </div>
+</div>
+<p style="font-size:10pt;color:#475569;margin-top:24px;">
+  Se confirma el pago recibido por el monto indicado, asociado al pedido <strong>{{ pedido.numero }}</strong>.
+</p>
+{% endblock %}

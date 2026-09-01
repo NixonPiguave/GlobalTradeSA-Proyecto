@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLOBTRADE S.A. — Dashboard Ejecutivo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233b82f6'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='16' fill='white' font-family='sans-serif'%3EG%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/app.css?v=97">
+  <link rel="stylesheet" href="/css/theme-pastel.css?v=86">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="layout-topnav">
+  <header id="topnav" class="gt-topnav">
+    <div class="topnav-inner">
+      <a href="/?page=dashboard" class="topnav-brand" id="topbar-home">
+        <span class="brand-mark" aria-hidden="true">GT</span>
+        <span class="brand-text"><strong>GLOBTRADE</strong><small>ERP Administrativo</small></span>
+      </a>
+      <button type="button" id="menu-toggle" class="topnav-menu-mobile" aria-label="Abrir menú">Menú</button>
+      <nav id="topnav-menus" class="topnav-menus" aria-label="Navegación principal"></nav>
+      <div class="topnav-actions">
+        <div class="notif-wrap" id="notif-wrap">
+          <button type="button" class="notif-bell" id="notif-bell" title="Notificaciones" aria-label="Notificaciones">
+            <svg class="notif-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3a5.5 5.5 0 0 0-5.5 5.5v1.2c0 1.4-.4 2.7-1.2 3.8L4 15.5h16l-1.3-2c-.8-1.1-1.2-2.4-1.2-3.8V8.5A5.5 5.5 0 0 0 12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M9.5 18.2a2.6 2.6 0 0 0 5 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span class="notif-dot" id="notif-count" hidden></span>
+          </button>
+          <div class="notif-panel" id="notif-panel" role="dialog" aria-label="Notificaciones">
+            <div class="notif-panel-head">
+              <h4>Notificaciones</h4>
+              <div class="notif-head-actions">
+                <button type="button" class="btn btn-secondary btn-sm" id="notif-leer-todas">Marcar leídas</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="notif-limpiar" title="Vaciar bandeja">Liberar</button>
+              </div>
+            </div>
+            <div id="notif-list" class="notif-list"><p class="notif-empty">Sin avisos por ahora.</p></div>
+          </div>
+        </div>
+        <span class="meta session-chip" id="session-chip" hidden></span>
+        <button class="btn btn-amber btn-sm" id="logout-btn" title="Cerrar sesión">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <header id="page-header">
+      <nav class="breadcrumb" id="breadcrumb" aria-label="Ubicación">Dirección</nav>
+      <h2 id="page-title">Dashboard Ejecutivo</h2>
+    </header>
+
+    <div id="content">
+      <!-- Dashboard -->
+      <section id="page-dashboard" class="page active">
+        <div class="filters">
+          <div class="field"><label>Desde</label><input type="date" id="dash-from"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="dash-to"></div>
+          <div class="field"><label>Región</label><select id="dash-region"><option value="">Todas</option></select></div>
+          <div class="field"><label>Origen</label>
+            <select id="dash-origen">
+              <option value="">Todos</option>
+              <option value="historico">Histórico</option>
+              <option value="portal">Portal B2B</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="dash-apply">Aplicar filtros</button>
+          <button type="button" class="btn btn-secondary" id="dash-clear">Limpiar</button>
+          <button class="btn btn-secondary" id="dash-reintegrar" title="Sincronizar pedidos pagados del portal a fact_ventas">Reintegrar pedidos</button>
+        </div>
+      <div class="kpi-grid kpi-grid-exec">
+          <div class="kpi-card"><div class="label">Ingresos totales</div><div class="value" id="kpi-revenue">—</div></div>
+          <div class="kpi-card"><div class="label">Profit total</div><div class="value profit" id="kpi-profit">—</div></div>
+          <div class="kpi-card"><div class="label">Margen %</div><div class="value" id="kpi-margin">—</div></div>
+          <div class="kpi-card"><div class="label">Unidades</div><div class="value" id="kpi-units">—</div></div>
+          <div class="kpi-card"><div class="label">Pedidos activos</div><div class="value" id="kpi-pedidos">—</div></div>
+          <div class="kpi-card"><div class="label">Almacén analítico</div><div class="value value-sm" id="kpi-clickhouse">—</div></div>
+        </div>
+        <div class="card warehouse-status">
+          <div class="card-title">Almacén analítico (ClickHouse)
+            <button class="btn btn-primary btn-sm" id="dash-sync-ch" type="button">Actualizar ahora</button>
+          </div>
+          <div id="etl-extra" class="kpi-grid"></div>
+          <p class="meta">Los gráficos detallados están en <button type="button" class="link-btn" data-goto="analitica">Panorama analítico</button> e Informes.</p>
+        </div>
+        <div class="charts-grid dash-charts-live">
+          <div class="card"><div class="card-title">Ingresos por región</div><div class="chart-wrap"><canvas id="chart-region"></canvas></div></div>
+          <div class="card"><div class="card-title">Ingresos por canal</div><div class="chart-wrap"><canvas id="chart-canal"></canvas></div></div>
+          <div class="card"><div class="card-title">Top productos</div><div class="chart-wrap"><canvas id="chart-item"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top 5 países por ganancia</div>
+          <div class="table-wrap">
+            <table class="table-top-paises">
+              <colgroup>
+                <col class="col-pais"><col class="col-region"><col class="col-profit">
+                <col class="col-revenue"><col class="col-margen">
+              </colgroup>
+              <thead><tr><th>País</th><th>Región</th><th class="num">Profit</th><th class="num">Ingresos</th><th class="num">Margen</th></tr></thead>
+              <tbody id="top-paises-body"></tbody>
+            </table>
+        </div>
+          <p class="query-time" id="dash-query-time"></p>
+        </div>
+      </section>
+
+      <!-- Ventas -->
+      <section id="page-ventas" class="page">
+        <div id="vista-ventas"></div>
+      </section>
+
+      <!-- Maestras -->
+      <section id="page-regiones" class="page">
+        <div id="vista-regiones"></div>
+      </section>
+
+      <section id="page-paises" class="page">
+        <div id="vista-paises"></div>
+      </section>
+
+      <section id="page-tipos-producto" class="page">
+        <div id="vista-tipos-producto"></div>
+      </section>
+
+      <section id="page-canales" class="page">
+        <div id="vista-canales"></div>
+      </section>
+
+      <section id="page-prioridades" class="page">
+        <div id="vista-prioridades"></div>
+      </section>
+
+      <!-- Pedidos (ERP) -->
+      <section id="page-pedidos" class="page">
+        <div class="filters">
+          <div class="field field-search"><label>Buscar</label><input id="ped-q" type="search" placeholder="Número o empresa..."></div>
+          <div class="field"><label>Estado</label>
+            <select id="ped-estado">
+              <option value="">Todos</option>
+              <option value="pendiente_pago">Pendiente de pago</option>
+              <option value="pagado">Pagado</option>
+              <option value="preparando">Preparando</option>
+              <option value="enviado">Enviado</option>
+              <option value="entregado">Entregado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="ped-search">Buscar</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Pedidos: <span id="ped-total">0</span></div>
+          <div class="table-wrap">
+            <table class="table-erp"><thead><tr>
+              <th>Número</th><th>Empresa</th><th>Fecha</th><th>Estado</th><th class="num center">Items</th><th class="num">Total</th><th class="col-actions center">Acciones</th>
+            </tr></thead><tbody id="ped-body"></tbody></table>
+          </div>
+          <div class="pager-compact" id="ped-pager">
+            <div class="pager-nav">
+              <button type="button" class="pager-btn" data-pg="prev" title="Anterior">‹</button>
+              <span class="pager-info" data-pg="info">1 / 1</span>
+              <button type="button" class="pager-btn" data-pg="next" title="Siguiente">›</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="ped-detalle-card" hidden>
+          <div class="card-title">Detalle: <span id="ped-detalle-numero"></span></div>
+          <div id="ped-detalle"></div>
+        </div>
+      </section>
+
+      <!-- Catálogo (ERP) -->
+      <section id="page-catalogo" class="page">
+        <div id="vista-catalogo"></div>
+      </section>
+
+      <!-- Inventario (ERP) -->
+      <section id="page-inventario" class="page">
+        <div id="vista-inventario"></div>
+        <div class="card inv-kardex-card" style="margin-top:1.25rem">
+          <div class="card-title">Movimientos recientes — <span id="inv-alertas-chip">0 alertas</span></div>
+          <div class="dv-filters inv-kardex-filters" style="margin-bottom:1rem">
+            <div class="field"><label>Producto (kardex)</label><select id="inv-kardex-filtro"><option value="">Todos los productos</option></select></div>
+          </div>
+          <div class="table-wrap inv-kardex-tabla">
+            <table class="table-erp"><thead><tr><th class="num">#</th><th>Tipo</th><th>Producto</th><th class="num">Cantidad</th><th>Referencia</th><th>Fecha</th></tr></thead>
+            <tbody id="inv-mov-body"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Operaciones -->
+      <section id="page-operaciones" class="page">
+        <div class="filters">
+          <p class="meta" style="margin-bottom:1rem">Resumen operativo: aprobaciones, recepciones, stock, despachos y tesorería. Informes PDF en <button type="button" class="link-btn" data-goto="reportes">Centro de informes</button>.</p>
+        </div>
+        <div class="kpi-grid" id="oper-kpis"></div>
+        <div class="charts-grid">
+          <div class="card wide">
+            <div class="card-title">Alertas de stock bajo</div>
+            <div class="table-wrap"><table class="table-erp"><thead><tr><th>Producto</th><th class="num">Disponible</th><th class="num">Umbral</th></tr></thead>
+            <tbody id="op-stock-body"></tbody></table></div>
+          </div>
+          <div class="card wide">
+            <div class="card-title">Pedidos operativos</div>
+            <div class="table-wrap"><table class="table-erp"><thead><tr><th>Nº</th><th>Cliente</th><th>Estado</th><th>Envío</th><th>Transportista</th></tr></thead>
+            <tbody id="op-pedidos-body"></tbody></table></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Compras (ERP) -->
+      <section id="page-compras" class="page">
+        <div id="vista-compras"></div>
+      </section>
+
+      <!-- Clientes (ERP) -->
+      <section id="page-clientes" class="page">
+        <div id="vista-clientes"></div>
+      </section>
+
+      <!-- Marketing portal B2B -->
+      <section id="page-marketing" class="page">
+        <p class="meta" style="margin-bottom:1rem">Banners y promociones que aparecen en la landing del portal B2B (<code>:8001</code>).</p>
+        <div id="vista-marketing"></div>
+      </section>
+
+      <!-- Rentabilidad -->
+      <section id="page-rentabilidad" class="page">
+        <div class="filters">
+          <div class="field"><label>Dimensión</label>
+            <select id="rent-dim">
+              <option value="categoria">Categoría</option>
+              <option value="producto">Producto (SKU)</option>
+              <option value="region">Región</option>
+              <option value="canal">Canal</option>
+            </select>
+          </div>
+          <div class="field"><label>Desde</label><input type="date" id="rent-from"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="rent-to"></div>
+          <button type="button" class="btn btn-primary" id="rent-search">Analizar</button>
+        </div>
+        <p class="meta" style="margin:0 0 1rem">Para exportar PDF o CSV usa <button type="button" class="link-btn" data-goto="reportes">Centro de informes</button> → Rentabilidad.</p>
+        <div class="kpi-grid" id="rent-kpis"></div>
+        <div class="card">
+          <div class="card-title">Análisis de rentabilidad</div>
+          <div class="table-wrap">
+            <table class="table-erp table-rentabilidad"><thead><tr>
+              <th>Dimensión</th><th class="num">Ingresos</th><th class="num">Costo</th><th class="num">Profit</th><th class="num">Margen %</th><th class="center">Clasificación</th>
+            </tr></thead><tbody id="rent-body"></tbody></table>
+          </div>
+          <div class="pager-compact" id="rent-pager">
+            <div class="pager-nav">
+              <button type="button" class="pager-btn" data-pg="prev" title="Anterior">‹</button>
+              <span class="pager-info" data-pg="info">1 / 1</span>
+              <button type="button" class="pager-btn" data-pg="next" title="Siguiente">›</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logística -->
+      <section id="page-logistica" class="page">
+        <div class="filters">
+          <p class="meta" style="margin-bottom:1rem">Asignar transportista <strong>despacha</strong> el pedido (aparece como <em>Enviado</em> en Pedidos B2B). Informes en <button type="button" class="link-btn" data-goto="reportes">Centro de informes</button>.</p>
+        </div>
+        <div id="vista-logistica"></div>
+      </section>
+
+      <!-- Usuarios y roles -->
+      <section id="page-usuarios" class="page">
+        <div id="vista-gobierno"></div>
+      </section>
+
+      <!-- Panorama analítico (táctico) -->
+      <section id="page-analitica" class="page">
+        <div class="filters filter-bar-sticky">
+          <div class="field"><label>Desde</label><input type="date" id="ana-from"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="ana-to"></div>
+          <button class="btn btn-primary" id="ana-apply" type="button">Actualizar</button>
+          <button class="btn btn-secondary" id="ana-clear" type="button">Limpiar filtros</button>
+          <span id="ana-ch-badge" class="meta" style="margin-left:auto"></span>
+        </div>
+        <div id="vista-analitica" class="charts-grid"></div>
+        <div id="ch-watermark" class="ch-watermark" hidden>ClickHouse</div>
+      </section>
+
+      <!-- Estrategia -->
+      <section id="page-estrategia" class="page">
+        <div id="vista-estrategia"></div>
+      </section>
+
+      <!-- Configuración -->
+      <section id="page-configuracion" class="page">
+        <p class="meta" style="margin-bottom:1rem">Parámetros globales del sistema (IVA, MOQ mayorista, identidad en PDFs).</p>
+        <div class="card cfg-brand-card">
+          <div class="card-title">Logo en comprobantes</div>
+          <p class="meta">Aparece en facturas, pedidos y otros PDF emitidos por GlobTrade S.A.</p>
+          <div class="cfg-logo-row">
+            <div id="cfg-logo-preview" class="cfg-logo-preview-wrap" aria-live="polite">
+              <span class="meta">Sin logo configurado</span>
+            </div>
+            <div class="cfg-logo-actions">
+              <input type="file" id="cfg-logo-file" accept="image/jpeg,image/png,image/webp" hidden>
+              <button type="button" class="btn btn-primary btn-sm" id="cfg-logo-upload">Subir logo</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="cfg-logo-clear" hidden>Quitar</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;flex-wrap:wrap">
+            <span>Inteligencia artificial</span>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+              <button type="button" class="btn btn-primary btn-sm" id="cfg-save-ia">Guardar</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="cfg-test-ia">Probar conexión</button>
+            </div>
+          </div>
+          <p class="meta">Proveedor compatible con OpenAI (Groq, OpenAI, etc.). La clave se guarda en la base de datos del sistema.</p>
+          <div class="cfg-ia-form" style="display:grid;gap:.75rem;max-width:36rem;margin-top:.75rem">
+            <div class="field">
+              <label for="cfg-ia-key">API Key</label>
+              <input type="password" id="cfg-ia-key" autocomplete="new-password" placeholder="gsk_… o sk-…" class="input-text">
+              <p class="meta" id="cfg-ia-key-hint">Sin clave configurada.</p>
+            </div>
+            <div class="field">
+              <label for="cfg-ia-url">URL base</label>
+              <input type="url" id="cfg-ia-url" placeholder="https://api.groq.com/openai/v1" class="input-text">
+            </div>
+            <div class="field">
+              <label for="cfg-ia-model">Modelo</label>
+              <input type="text" id="cfg-ia-model" placeholder="llama-3.3-70b-versatile" class="input-text">
+            </div>
+          </div>
+          <p class="meta" id="cfg-ia-status" style="margin-top:.75rem"></p>
+        </div>
+        <div class="card" style="margin-top:1rem">
+          <div class="card-title">Parámetros</div>
+          <div id="vista-configuracion"></div>
+        </div>
+      </section>
+
+      <!-- Auditoría -->
+      <section id="page-auditoria" class="page">
+        <div class="filters" id="aud-filters">
+          <div class="field"><label>Entidad</label>
+            <select id="aud-entidad"><option value="">Todas</option></select>
+          </div>
+          <div class="field"><label>Acción</label>
+            <select id="aud-accion"><option value="">Todas</option></select>
+          </div>
+          <div class="field"><label>Usuario (email)</label>
+            <input id="aud-email" type="search" placeholder="admin@…">
+          </div>
+          <div class="field"><label>ID entidad</label>
+            <input id="aud-entidad-id" type="number" min="1" placeholder="ej. 25">
+          </div>
+          <div class="field"><label>Desde</label><input id="aud-desde" type="date"></div>
+          <div class="field"><label>Hasta</label><input id="aud-hasta" type="date"></div>
+          <div class="field"><label>Buscar</label>
+            <input id="aud-q" type="search" placeholder="texto en acción o valores…">
+          </div>
+          <div class="field"><label>Límite</label>
+            <select id="aud-limit">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" id="aud-search">Buscar</button>
+          <button type="button" class="btn btn-secondary" id="aud-clear">Limpiar</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Log de operaciones críticas <span class="meta" id="aud-count"></span></div>
+          <div class="table-wrap">
+            <table class="table-erp"><thead><tr>
+              <th>Fecha</th><th>Usuario</th><th>Entidad</th><th class="col-id center">ID</th><th>Acción</th><th>Detalle</th>
+            </tr></thead>
+            <tbody id="aud-body"></tbody></table>
+          </div>
+          <div class="pagination pager-compact" id="aud-pager" style="margin-top:.75rem"></div>
+        </div>
+      </section>
+
+      <!-- Finanzas (contabilidad) -->
+      <section id="page-finanzas" class="page">
+        <div class="fin-intro card">
+          <div class="fin-intro-head">
+            <div>
+              <h2 class="fin-intro-title">Contabilidad de GlobTrade S.A.</h2>
+              <p class="fin-intro-text">Libro mayor simplificado de <strong>nuestra empresa</strong>: saldos por cuenta y asientos generados automáticamente cuando un cliente <strong>paga un pedido</strong> en el portal B2B.</p>
+            </div>
+            <div class="fin-flow" aria-hidden="true">
+              <span class="fin-flow-step">Venta B2B</span>
+              <span class="fin-flow-arrow">→</span>
+              <span class="fin-flow-step">CxC</span>
+              <span class="fin-flow-arrow">→</span>
+              <span class="fin-flow-step fin-flow-step--highlight">Caja</span>
+            </div>
+          </div>
+          <ul class="fin-intro-list">
+            <li><strong>Inventario (1301):</strong> mercadería comprada a proveedores. Sube al recibir una orden de compra.</li>
+            <li><strong>Cuentas por pagar (2002):</strong> la compra se registra primero como deuda; se cierra con el pago.</li>
+            <li><strong>Caja (1101):</strong> desciende al pagar órdenes de compra con método <em>caja</em>. Si se usa <em>pago externo</em>, se carga a Pagos externos (3001) y la caja queda intacta.</li>
+            <li><strong>CxC (1201):</strong> lo que nos deben los clientes. Baja cuando cobramos.</li>
+          </ul>
+        </div>
+        <div class="filters fin-toolbar">
+          <button class="btn btn-primary" id="fin-refresh" title="Regenera asientos faltantes de pedidos pagados y actualiza saldos">Sincronizar y actualizar</button>
+          <button class="btn btn-secondary" id="fin-regularizar-caja" title="Crea un asiento para dejar Caja (1101) en $0 (contra Pagos externos 3001)" hidden disabled>Regularizar caja a $0</button>
+          <span class="fin-toolbar-hint">Informes PDF en <button type="button" class="link-btn" data-goto="reportes">Centro de informes</button>. La caja baja al pagar OC con método caja; si queda negativa, usa Regularizar.</span>
+        </div>
+        <div class="kpi-grid fin-kpis" id="fin-kpis"></div>
+        <div class="card fin-card">
+          <div class="card-title">Saldos por cuenta</div>
+          <div class="table-wrap">
+            <table class="fin-table"><thead><tr><th>Código</th><th>Cuenta</th><th>Tipo</th><th class="num">Debe</th><th class="num">Haber</th><th class="num">Saldo</th></tr></thead>
+            <tbody id="fin-cuentas-body"></tbody></table>
+          </div>
+        </div>
+        <div class="card fin-card">
+          <div class="card-title">Asientos recientes (<span id="fin-asientos-total">0</span>)</div>
+          <div class="table-wrap">
+            <table class="fin-table"><thead><tr><th>Número</th><th>Fecha</th><th>Descripción</th><th class="num">Total</th><th class="num">Pedido</th></tr></thead>
+            <tbody id="fin-asientos-body"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Generador / ETL -->
+      <!-- Reportes -->
+      <section id="page-reportes" class="page">
+        <div id="vista-reportes"></div>
+      </section>
+
+      <section id="page-generador" class="page">
+        <p class="gen-db-stats">Registros en <strong>fact_ventas</strong>: <span id="gen-ventas-total">—</span></p>
+        <label class="gen-goto-ventas-wrap">
+          <input type="checkbox" id="gen-goto-ventas" checked>
+          Ir a Ventas al terminar con éxito
+        </label>
+        <div class="generador-panels">
+          <div class="generador-panel">
+            <h4>Generar ventas sintéticas</h4>
+            <p>Crea ventas de ejemplo en gran volumen para pruebas o demostraciones.</p>
+            <div class="field" style="margin:1rem auto;max-width:200px">
+              <label>Cantidad</label>
+              <input type="number" id="gen-cantidad" value="100000" min="1" max="1000000" step="1000">
+            </div>
+            <button type="button" class="btn btn-primary" id="gen-btn">
+              <span class="btn-spinner loader" hidden aria-hidden="true"></span>
+              <span class="btn-label">Generar ventas</span>
+            </button>
+            <p class="gen-result" id="gen-result"></p>
+            </div>
+          <div class="generador-panel">
+            <h4>Importar ventas.parquet</h4>
+            <p>Carga al sistema las ventas del archivo parquet; no repite pedidos ya existentes.</p>
+            <button type="button" class="btn btn-success" id="import-parquet-btn" style="margin-top:1rem">
+              <span class="btn-spinner loader" hidden aria-hidden="true"></span>
+              <span class="btn-label">Importar ventas.parquet</span>
+            </button>
+            <p class="gen-result" id="import-result"></p>
+          </div>
+          <div class="generador-panel">
+            <h4>Importar CSV de ventas</h4>
+            <p>Sube un archivo CSV con el formato del ETL histórico (columnas: order_id, region, country, item_type…).</p>
+            <div class="field" style="margin-top:1rem">
+              <input type="file" id="etl-csv-file" accept=".csv,text/csv" />
+            </div>
+            <button type="button" class="btn btn-secondary" id="etl-csv-btn" style="margin-top:0.75rem">
+              <span class="btn-spinner loader" hidden aria-hidden="true"></span>
+              <span class="btn-label">Cargar CSV</span>
+            </button>
+            <p class="gen-result" id="etl-csv-result"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Modal truncate -->
+  <div id="truncate-overlay" class="modal-overlay">
+    <div class="modal modal-danger">
+      <h3>⚠️ Borrar todos los registros</h3>
+      <p>¿Estás seguro? Esta acción borrará todos los registros de <strong>fact_ventas</strong>. Escribe <strong>CONFIRMAR</strong> para continuar.</p>
+      <div class="field">
+        <input type="text" id="truncate-confirm" placeholder="CONFIRMAR" autocomplete="off">
+    </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="truncate-cancel">Cancelar</button>
+        <button class="btn btn-danger" id="truncate-ok" disabled>Eliminar todo</button>
+    </div>
+  </div>
+</div>
+
+  <div id="gen-op-overlay" class="gen-op-overlay" hidden aria-live="assertive">
+    <div class="gen-op-card" id="gen-op-card">
+      <p id="gen-op-message"></p>
+      <div class="gen-op-actions">
+        <button type="button" class="btn btn-secondary" id="gen-op-close">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="gen-op-ventas" hidden>Ver ventas</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/js/auth.js?v=85"></script>
+  <script src="/js/nav.js?v=85"></script>
+  <script src="/js/app.js?v=96"></script>
+  <script src="/js/views.js?v=93"></script>
+  <script src="/js/charts.js?v=85"></script>
+    <script src="/js/erp.js?v=108"></script>
+  <script src="/js/gobierno.js?v=97"></script>
+  <script src="/js/reportes.js?v=96"></script>
+  <script src="/js/estrategia.js?v=86"></script>
+</body>
+</html>

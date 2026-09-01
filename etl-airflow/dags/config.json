@@ -1,0 +1,42 @@
+{
+  "_comentario": "Lista de DAGs del proceso ETL GlobalTrade S.A. La columna 'cron' indica cada cuánto se ejecuta; 'habilitado' define si se enciende (los DAGs no habilitados aparecen pausados en la UI de Airflow). El cron por defecto se puede cambiar desde la UI (DAGs → Schedule) o en etl_01_pipeline_dag.py.",
+  "dags": [
+    {
+      "dag_id": "etl_01_pipeline_dag",
+      "etapa": "ELT completo (extracción → transformación → carga → analítica)",
+      "cron": "0 2 * * *",
+      "frecuencia": "cada día a las 02:00",
+      "habilitado": true,
+      "estrategia": "incremental",
+      "origen": "data/ventas.parquet + pedidos portal + fact_compras"
+    },
+    {
+      "dag_id": "etl_02_rebuild_dag",
+      "etapa": "Reconstrucción total (borrar y recargar)",
+      "cron": null,
+      "frecuencia": "bajo demanda (manual)",
+      "habilitado": false,
+      "estrategia": "rebuild",
+      "origen": "data/ventas.parquet"
+    },
+    {
+      "dag_id": "etl_03_ia_alertas_dag",
+      "etapa": "IA opcional: anomalías diarias de ingresos (z-score)",
+      "cron": null,
+      "frecuencia": "bajo demanda (manual)",
+      "habilitado": false,
+      "estrategia": "ia",
+      "nota": "Se activa creando la Variable ETL_IA_HABILITADA=1 (IA solo donde es imprescindible)."
+    },
+    {
+      "dag_id": "etl_04_reportes_dag",
+      "etapa": "Generación programada del paquete de reportes ejecutivos (PDF/CSV → shared/storage/reportes)",
+      "cron": "30 2 * * *",
+      "frecuencia": "cada día a las 02:30 (después del pipeline)",
+      "habilitado": true,
+      "estrategia": "reportes programados",
+      "origen": "reporte_service del panel (misma DuckDB)",
+      "nota": "Los artefactos quedan disponibles en el panel en Reportes → Reportes programados (GET /api/reportes/programados). Retención: 30 días."
+    }
+  ]
+}

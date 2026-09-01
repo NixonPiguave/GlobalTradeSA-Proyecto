@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="section">
+  <h2>Facturar a</h2>
+  <div class="info-grid">
+    <div><strong>Empresa:</strong> {{ cliente.empresa }}</div>
+    <div><strong>País:</strong> {{ cliente.pais or '—' }}</div>
+    <div><strong>Pedido ref.:</strong> {{ pedido.numero }}</div>
+    <div><strong>Estado factura:</strong> {{ factura.estado }}</div>
+  </div>
+</div>
+<table class="lines">
+  <thead><tr><th>Producto</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Subtotal</th></tr></thead>
+  <tbody>
+    {% for i in items %}
+    <tr>
+      <td>{{ i.producto }}</td>
+      <td class="num">{{ i.cantidad }}</td>
+      <td class="num">{{ i.precio_unitario_fmt }}</td>
+      <td class="num">{{ i.subtotal_fmt }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="totals">
+  <div class="row"><span>Subtotal gravable</span><span>{{ subtotal_fmt }}</span></div>
+  <div class="row"><span>IGV / IVA ({{ iva_pct }}%)</span><span>{{ impuesto_fmt }}</span></div>
+  <div class="row grand"><span>Total factura</span><span>{{ total_fmt }}</span></div>
+</div>
+{% endblock %}

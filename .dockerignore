@@ -1,0 +1,15 @@
+.git
+.cursor
+.specify
+specs
+docs
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+db/
+GlobMarket-B2B/
+GlobalTradeSA-duckdb/
+.env
+.env.*
+*.md
+.pytest_cache

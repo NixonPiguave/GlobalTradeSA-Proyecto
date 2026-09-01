@@ -1,0 +1,54 @@
+{
+  "volumen_filas_fact_ventas": 1000013,
+  "sql_informe_directo": {
+    "mediana_s": 0.0025,
+    "min_s": 0.0021,
+    "muestras": [
+      0.0095,
+      0.0025,
+      0.0021
+    ]
+  },
+  "kpi_persistido": {
+    "mediana_s": 0.0004,
+    "min_s": 0.0004,
+    "muestras": [
+      0.0009,
+      0.0004,
+      0.0004
+    ]
+  },
+  "etl_completo": {
+    "mediana_s": 1.9378,
+    "min_s": 1.9378,
+    "muestras": [
+      1.9378
+    ]
+  },
+  "ultimas_ejecuciones_etl_control": [
+    {
+      "etapa": "carga",
+      "inicio": "1786241391.044769",
+      "tiempo_s": 0.24,
+      "filas": 9,
+      "estado": "OK",
+      "detalle": "estrategia=incremental"
+    },
+    {
+      "etapa": "transformacion",
+      "inicio": "1786241390.529589",
+      "tiempo_s": 0.25,
+      "filas": 100011,
+      "estado": "OK",
+      "detalle": ""
+    },
+    {
+      "etapa": "extraccion",
+      "inicio": "1786241389.4902775",
+      "tiempo_s": 0.912,
+      "filas": 100023,
+      "estado": "OK",
+      "detalle": ""
+    }
+  ]
+}

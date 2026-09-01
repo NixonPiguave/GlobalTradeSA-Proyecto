@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="section">
+  <h2>Cliente</h2>
+  <div class="info-grid">
+    <div><strong>Empresa:</strong> {{ cliente.empresa }}</div>
+    <div><strong>País:</strong> {{ cliente.pais or '—' }}</div>
+    <div><strong>Pedido interno:</strong> {{ pedido.numero }}</div>
+    <div><strong>Estado:</strong> {{ pedido.estado }}</div>
+  </div>
+</div>
+<table class="lines">
+  <thead><tr><th>Producto</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Subtotal</th></tr></thead>
+  <tbody>
+    {% for i in items %}
+    <tr>
+      <td>{{ i.producto }}</td>
+      <td class="num">{{ i.cantidad }}</td>
+      <td class="num">{{ i.precio_unitario_fmt }}</td>
+      <td class="num">{{ i.subtotal_fmt }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="totals">
+  <div class="row"><span>Subtotal</span><span>{{ subtotal_fmt }}</span></div>
+  <div class="row"><span>Impuesto ({{ iva_pct }}%)</span><span>{{ impuesto_fmt }}</span></div>
+  <div class="row grand"><span>Total</span><span>{{ total_fmt }}</span></div>
+</div>
+{% if pedido.notas %}<p style="margin-top:16px;font-size:9pt;color:#64748b;"><strong>Notas:</strong> {{ pedido.notas }}</p>{% endif %}
+{% endblock %}

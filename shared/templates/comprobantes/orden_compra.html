@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="section">
+  <h2>Proveedor</h2>
+  <div class="info-grid">
+    <div><strong>Razón social:</strong> {{ proveedor.razon_social }}</div>
+    <div><strong>OC ref.:</strong> {{ orden.numero }}</div>
+    <div><strong>Estado:</strong> {{ orden.estado }}</div>
+    <div><strong>Total:</strong> {{ total_fmt }}</div>
+  </div>
+</div>
+<table class="lines">
+  <thead><tr><th>Producto</th><th class="num">Cant.</th><th class="num">Costo u.</th><th class="num">Subtotal</th></tr></thead>
+  <tbody>
+    {% for i in items %}
+    <tr><td>{{ i.producto }}</td><td class="num">{{ i.cantidad }}</td><td class="num">{{ i.costo_fmt }}</td><td class="num">{{ i.subtotal_fmt }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

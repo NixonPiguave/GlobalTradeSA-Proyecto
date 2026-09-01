@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mis pedidos — GlobMarket B2B</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: { fontFamily: { sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui'], display: ['Manrope', 'IBM Plex Sans', 'sans-serif'] } } } };
+    </script>
+    <link rel="stylesheet" href="/css/app.css?v=81" />
+  </head>
+
+  <body class="font-sans bg-slate-50 text-slate-800">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+
+    <header class="gm-header sticky top-0 z-40"></header>
+
+    <main class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
+      <h1 class="text-2xl font-extrabold text-slate-900">Mis pedidos</h1>
+      <p class="mt-1 text-sm text-slate-600">Historial de compras de tu empresa con su estado actual.</p>
+
+      <div id="ped-lista" class="mt-6 space-y-3"></div>
+      <div id="ped-detalle" class="mt-8"></div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/js/app.js?v=88"></script>
+    <script src="/js/carrito.js?v=82"></script>
+    <script>
+      (function () {
+        if (!getToken()) { window.location.href = '/pages/login.html'; return; }
+
+        const ESTADOS_REORDEN = new Set(['pagado', 'preparando', 'enviado', 'entregado']);
+
+        const BADGE = {
+          pendiente_pago: ['Pendiente de pago', 'bg-amber-100 text-amber-800 border-amber-200'],
+          pagado: ['Pagado', 'bg-blue-100 text-blue-800 border-blue-200'],
+          preparando: ['Preparando', 'bg-violet-100 text-violet-800 border-violet-200'],
+          enviado: ['Enviado', 'bg-sky-100 text-sky-800 border-sky-200'],
+          entregado: ['Entregado', 'bg-emerald-100 text-emerald-800 border-emerald-200'],
+          cancelado: ['Cancelado', 'bg-rose-100 text-rose-800 border-rose-200'],
+        };
+        const badge = (estado) => {
+          const [label, cls] = BADGE[estado] || [estado, 'bg-slate-100 text-slate-700 border-slate-200'];
+          return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-lg border text-xs font-semibold ${cls}">${label}</span>`;
+        };
+        const ORDEN_TL = ['pendiente_pago', 'pagado', 'preparando', 'enviado', 'entregado'];
+
+        function mostrarToastsReorden(resumen) {
+          if (!resumen) return;
+          (resumen.omitidos || []).forEach((o) => {
+            const nombre = o.nombre_producto || `Producto #${o.id_producto}`;
+            const motivo = o.motivo === 'sin_stock' ? 'sin stock en tu zona' : 'no disponible';
+            showToast('warning', `${nombre}: omitido (${motivo}).`);
+          });
+          (resumen.ajustados || []).forEach((a) => {
+            const nombre = a.nombre_producto || `Producto #${a.id_producto}`;
+            showToast('info', `${nombre}: cantidad ajustada a ${a.cantidad_agregada} u. por stock.`);
+          });
+        }
+
+        async function ejecutarVolverAPedir(idPedido, btn) {
+          if (btn?.dataset.loading === '1') return;
+          const token = getToken();
+          if (btn) {
+            btn.disabled = true;
+            btn.dataset.loading = '1';
+          }
+          try {
+            const res = await fetch(`/api/pedidos/${idPedido}/volver-a-pedir`, {
+              method: 'POST',
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            });
+            let data = null;
+            try { data = await res.json(); } catch (_) { /* noop */ }
+            if (res.ok && data?.resumen) {
+              sessionStorage.setItem('gm-reorden-resumen', JSON.stringify(data.resumen));
+              const n = data.resumen.n_agregados || 0;
+              showToast('success', `${n} producto(s) agregados al carrito.`);
+              window.location.href = '/pages/catalogo.html?carrito=1';
+              return;
+            }
+            if (res.status === 422 && data?.detail?.resumen) {
+              mostrarToastsReorden(data.detail.resumen);
+              showToast('warning', data.detail.message || 'No se pudo agregar ningún producto al carrito.');
+              return;
+            }
+            const msg = (data && typeof data.detail === 'object' && data.detail.message)
+              || (typeof data?.detail === 'string' ? data.detail : null)
+              || extraerMensajeError(data, res.status);
+            showToast('error', msg);
+          } catch (e) {
+            showToast('error', e.message || 'No se pudo volver a pedir.');
+          } finally {
+            if (btn) {
+              btn.disabled = false;
+              delete btn.dataset.loading;
+            }
+          }
+        }
+
+        async function cargarLista() {
+          const cont = document.getElementById('ped-lista');
+          try {
+            const pedidos = await apiFetch('/api/pedidos', { auth: true });
+            if (!pedidos.length) {
+              cont.innerHTML = `
+                <div class="rounded-2xl border border-slate-200 bg-white p-8 text-center">
+                  <div class="text-4xl mb-3">📦</div>
+                  <div class="font-semibold text-slate-900">Aún no tienes pedidos</div>
+                  <a href="/pages/catalogo.html" class="mt-3 inline-block text-sm font-semibold text-blue-700">Ir al catálogo →</a>
+                </div>`;
+              return;
+            }
+            cont.innerHTML = pedidos.map((p) => `
+              <button data-ped="${p.id_pedido}" class="w-full text-left rounded-2xl border border-slate-200 bg-white p-4 hover:border-blue-200 hover:shadow-sm transition flex flex-wrap items-center gap-4">
+                <div class="font-extrabold text-slate-900">${escapeHtml(p.numero || ('#' + p.id_pedido))}</div>
+                <div class="text-sm text-slate-500">${escapeHtml((p.fecha || '').slice(0, 16).replace('T', ' '))}</div>
+                <div>${badge(p.estado)}</div>
+                <div class="text-sm text-slate-500">${p.n_items} producto(s)</div>
+                <div class="ml-auto font-extrabold text-slate-900">${formatUsd(p.total)}</div>
+              </button>`).join('');
+            cont.querySelectorAll('[data-ped]').forEach((b) => b.addEventListener('click', () => verDetalle(Number(b.dataset.ped))));
+          } catch (e) {
+            cont.innerHTML = `<div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">${escapeHtml(e.message)}</div>`;
+          }
+        }
+
+        async function verDetalle(id) {
+          const cont = document.getElementById('ped-detalle');
+          cont.innerHTML = '<div class="rounded-2xl border border-slate-200 bg-white p-6 animate-pulse h-40"></div>';
+          try {
+            const p = await apiFetch(`/api/pedidos/${id}`, { auth: true });
+            const alcanzados = new Set(p.historial.map((h) => h.estado_nuevo));
+            const cancelado = p.estado === 'cancelado';
+            const timeline = cancelado
+              ? `<div class="flex items-center gap-2 text-rose-700 font-semibold text-sm"><span class="h-3 w-3 rounded-full bg-rose-500"></span> Pedido cancelado</div>`
+              : `<div class="flex items-center justify-between">${ORDEN_TL.map((e, idx) => {
+                  const done = alcanzados.has(e) || ORDEN_TL.indexOf(p.estado) >= idx;
+                  return `
+                    <div class="flex-1 flex flex-col items-center gap-1 relative">
+                      ${idx > 0 ? `<div class="absolute top-2 right-1/2 w-full h-0.5 ${done ? 'bg-blue-500' : 'bg-slate-200'}"></div>` : ''}
+                      <span class="relative z-10 h-4 w-4 rounded-full ${done ? 'bg-blue-600' : 'bg-slate-300'}"></span>
+                      <span class="text-[11px] font-semibold ${done ? 'text-blue-700' : 'text-slate-400'} text-center">${(BADGE[e] || [e])[0]}</span>
+                    </div>`;
+                }).join('')}</div>`;
+            cont.innerHTML = `
+              <div class="rounded-2xl border border-slate-200 bg-white p-6">
+                <div class="flex flex-wrap items-center gap-3">
+                  <h2 class="text-lg font-extrabold text-slate-900">${escapeHtml(p.numero)}</h2>
+                  ${badge(p.estado)}
+                  <span class="ml-auto text-sm text-slate-500">${escapeHtml((p.fecha || '').slice(0, 16).replace('T', ' '))}</span>
+                </div>
+                <div class="mt-6">${timeline}</div>
+                <div class="mt-6 divide-y divide-slate-100">
+                  ${p.items.map((i) => `
+                    <div class="py-3 flex items-center gap-4">
+                      <div class="h-12 w-12 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden shrink-0">
+                        ${i.imagen_url ? `<img src="${escapeHtml(i.imagen_url)}" class="h-full w-full object-cover" onerror="this.style.display='none'">` : ''}
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-sm font-semibold text-slate-900 truncate">${escapeHtml(nombreProductoEs(i.nombre_producto))}</div>
+                        <div class="text-xs text-slate-500">${i.cantidad} u. × ${formatUsd(i.precio_unitario)}</div>
+                      </div>
+                      <div class="font-bold text-slate-900">${formatUsd(i.subtotal)}</div>
+                    </div>`).join('')}
+                </div>
+                <div class="mt-4 pt-4 border-t border-slate-200 text-sm space-y-1">
+                  <div class="flex justify-between"><span class="text-slate-600">Subtotal</span><span class="font-bold">${formatUsd(p.subtotal)}</span></div>
+                  <div class="flex justify-between"><span class="text-slate-600">Impuesto</span><span class="font-bold">${formatUsd(p.impuesto)}</span></div>
+                  <div class="flex justify-between text-base"><span class="font-extrabold text-slate-900">Total</span><span class="font-extrabold text-blue-700">${formatUsd(p.total)}</span></div>
+                </div>
+                ${p.notas ? `<div class="mt-4 rounded-xl bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-600">${escapeHtml(p.notas)}</div>` : ''}
+                ${p.envio ? `
+                  <div class="mt-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm">
+                    <div class="font-semibold text-sky-900">Seguimiento de envío</div>
+                    <div class="text-sky-800 mt-1">${escapeHtml(p.envio.transportista || 'Transportista')} · ${escapeHtml(p.envio.estado || '')}</div>
+                    ${p.envio.eventos?.length ? `<ul class="mt-2 space-y-1 text-sky-700">${p.envio.eventos.map((e) => `<li>${escapeHtml((e.fecha || '').slice(0, 16).replace('T', ' '))} — ${escapeHtml(e.descripcion || e.estado)}</li>`).join('')}</ul>` : ''}
+                  </div>` : ''}
+                ${p.estado === 'pendiente_pago' ? `
+                  <button id="pagar-pendiente" class="mt-5 rounded-xl bg-emerald-600 text-white px-5 py-3 font-semibold hover:bg-emerald-700 transition">Pagar ahora (simulado)</button>` : ''}
+                ${p.estado === 'pendiente_pago' || p.estado === 'pagado' ? `
+                  <button id="cancelar-pedido" class="mt-3 rounded-xl border border-rose-200 text-rose-700 bg-rose-50 px-5 py-3 font-semibold hover:bg-rose-100 transition">Cancelar pedido</button>` : ''}
+                ${ESTADOS_REORDEN.has(p.estado) ? `
+                  <button id="volver-a-pedir" type="button" class="mt-5 rounded-xl bg-blue-600 text-white px-5 py-3 font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">Volver a pedir</button>` : ''}
+                ${p.estado !== 'pendiente_pago' && p.estado !== 'cancelado' ? `
+                  <div class="mt-5 flex flex-wrap gap-2">
+                    <button data-dl-pedido class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold hover:border-blue-200 transition">PDF Pedido</button>
+                    ${p.factura ? `<button data-dl-factura class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold hover:border-blue-200 transition">PDF Factura</button>` : ''}
+                    ${p.pagos && p.pagos[0] ? `<button data-dl-pago class="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-semibold hover:border-blue-200 transition">PDF Pago</button>` : ''}
+                  </div>` : ''}
+              </div>`;
+            async function dlPdf(tipo, entidadId, nombre) {
+              const token = getToken();
+              const res = await fetch(`/api/comprobantes/${tipo}/${entidadId}/pdf`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+              });
+              if (!res.ok) {
+                const t = await res.text();
+                let msg = 'No se pudo abrir el PDF';
+                try { msg = JSON.parse(t).detail || msg; } catch (_) { /* noop */ }
+                throw new Error(msg);
+              }
+              const blob = await res.blob();
+              const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+              const win = window.open(url, '_blank', 'noopener');
+              if (!win) {
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${nombre || tipo}.pdf`;
+                a.click();
+              }
+              setTimeout(() => URL.revokeObjectURL(url), 120000);
+            }
+            document.getElementById('pagar-pendiente')?.addEventListener('click', async () => {
+              try {
+                await apiFetch('/api/pedidos/pagar', { method: 'POST', auth: true, body: { id_pedido: p.id_pedido, metodo: 'tarjeta' } });
+                showToast('success', 'Pago aprobado.');
+                await Promise.all([cargarLista(), verDetalle(p.id_pedido)]);
+              } catch (e) {
+                showToast('error', e.message);
+              }
+            });
+            document.getElementById('cancelar-pedido')?.addEventListener('click', async () => {
+              if (!confirm(`¿Cancelar el pedido ${p.numero}? ${p.estado === 'pagado' ? 'El stock será repuesto y el pago revertido.' : ' Esta acción no se puede deshacer.'}`)) return;
+              try {
+                await apiFetch(`/api/pedidos/${p.id_pedido}/cancelar`, { method: 'POST', auth: true });
+                showToast('success', 'Pedido cancelado.');
+                await Promise.all([cargarLista(), verDetalle(p.id_pedido)]);
+              } catch (e) {
+                showToast('error', e.message);
+              }
+            });
+            document.getElementById('volver-a-pedir')?.addEventListener('click', () => {
+              void ejecutarVolverAPedir(p.id_pedido, document.getElementById('volver-a-pedir'));
+            });
+            cont.querySelector('[data-dl-pedido]')?.addEventListener('click', async () => {
+              try { await dlPdf('pedido', p.id_pedido, p.numero); showToast('success', 'PDF abierto en nueva pestaña.'); }
+              catch (e) { showToast('error', e.message); }
+            });
+            cont.querySelector('[data-dl-factura]')?.addEventListener('click', async () => {
+              if (!p.factura) return;
+              try { await dlPdf('factura', p.factura.id_factura, p.factura.numero); showToast('success', 'PDF abierto en nueva pestaña.'); }
+              catch (e) { showToast('error', e.message); }
+            });
+            cont.querySelector('[data-dl-pago]')?.addEventListener('click', async () => {
+              if (!p.pagos || !p.pagos[0]) return;
+              try { await dlPdf('comprobante_pago', p.pagos[0].id_pago, p.pagos[0].numero); showToast('success', 'PDF abierto en nueva pestaña.'); }
+              catch (e) { showToast('error', e.message); }
+            });
+            cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          } catch (e) {
+            cont.innerHTML = `<div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">${escapeHtml(e.message)}</div>`;
+          }
+        }
+
+        cargarLista().then(() => {
+          const params = new URLSearchParams(location.search);
+          const pedidoId = Number(params.get('pedido') || 0);
+          const stored = sessionStorage.getItem('gm-pago-ok');
+          if (stored) {
+            try {
+              const info = JSON.parse(stored);
+              showToast('success', `Pago aprobado · Pedido ${info.numero || ''}`.trim());
+            } catch (_) { /* noop */ }
+            sessionStorage.removeItem('gm-pago-ok');
+          }
+          if (pedidoId > 0) {
+            history.replaceState({}, '', '/pages/mis-pedidos.html');
+            void verDetalle(pedidoId);
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

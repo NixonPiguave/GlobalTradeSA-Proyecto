@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLOBTRADE S.A. — Acceso al panel</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233b82f6'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='16' fill='white' font-family='sans-serif'%3EG%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/app.css?v=21">
+</head>
+<body class="login-page">
+  <div class="login-wrap">
+    <form class="login-card" id="login-form" autocomplete="on">
+      <div class="login-brand">
+        <div class="login-logo" aria-hidden="true">G</div>
+        <div>
+          <h1>GLOBTRADE S.A.</h1>
+          <p class="sub">Panel administrativo</p>
+        </div>
+      </div>
+      <p class="login-lead">Acceso restringido al personal autorizado.</p>
+      <label for="email">Correo corporativo</label>
+      <input type="email" id="email" name="email" required autocomplete="username" placeholder="admin@globmarket.com">
+      <label for="password">Contraseña</label>
+      <div class="login-pw-wrap">
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••">
+        <button type="button" class="login-pw-toggle" id="pw-toggle" aria-label="Mostrar contraseña" title="Mostrar/ocultar">👁</button>
+      </div>
+      <button class="login-btn" id="login-btn" type="submit">Iniciar sesión</button>
+      <p class="login-error" id="login-error" role="alert"></p>
+      <p class="login-hint">Roles: administrador, ventas y almacén.</p>
+    </form>
+  </div>
+  <script src="/js/auth.js?v=2"></script>
+  <script>
+    document.getElementById('pw-toggle')?.addEventListener('click', () => {
+      const inp = document.getElementById('password');
+      if (!inp) return;
+      const show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      document.getElementById('pw-toggle').setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+    });
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      const errEl = document.getElementById('login-error');
+      errEl.textContent = '';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error((data && (data.detail || data.message)) || 'Credenciales inválidas.');
+        }
+        window.adminAuth.save(data.access_token, { email: data.email, rol: data.rol });
+        try {
+          const meRes = await fetch('/api/auth/me', {
+            headers: { Authorization: 'Bearer ' + data.access_token },
+          });
+          const me = await meRes.json().catch(() => ({}));
+          if (meRes.ok) {
+            window.adminAuth.save(data.access_token, {
+              email: me.email || data.email,
+              rol: me.rol || data.rol,
+              permisos: Array.isArray(me.permisos) ? me.permisos : [],
+            });
+          }
+        } catch (_) { /* bootApp refrescará permisos */ }
+        window.location.replace('/');
+      } catch (err) {
+        errEl.textContent = err.message || 'No se pudo iniciar sesión.';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

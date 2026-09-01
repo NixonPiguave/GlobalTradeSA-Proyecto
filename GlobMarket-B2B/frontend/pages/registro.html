@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Registro — GlobMarket B2B</title>
+    <meta name="description" content="Crea tu cuenta empresarial para comprar al por mayor en GlobMarket B2B." />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Arial'] },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="/css/app.css?v=3" />
+  </head>
+
+  <body class="font-sans bg-slate-50 text-slate-800">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+
+    <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+          <a href="/" class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-sm">
+              <span class="text-white font-extrabold">G</span>
+            </div>
+            <div class="text-sm font-extrabold text-slate-900 tracking-tight">GlobMarket <span class="text-blue-700">B2B</span></div>
+          </a>
+          <nav class="flex items-center gap-2">
+            <a href="/pages/catalogo.html" class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:border-blue-200 transition text-sm font-semibold">Catálogo</a>
+            <a data-nav-login href="/pages/login.html" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition">Iniciar sesión</a>
+            <button data-nav-logout class="hidden px-4 py-2 rounded-xl border border-slate-200 bg-white hover:border-blue-200 transition text-sm font-semibold">Cerrar sesión</button>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+      <div class="max-w-2xl mx-auto">
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm p-6 sm:p-8">
+          <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Registro empresarial</h1>
+          <p class="mt-2 text-sm text-slate-600">Crea tu cuenta para ver precios mayoristas y gestionar pedidos.</p>
+
+          <form id="registro-form" class="mt-6 grid sm:grid-cols-2 gap-4" novalidate>
+            <div id="registro-msg" class="hidden sm:col-span-2"></div>
+            <div class="sm:col-span-2">
+              <label class="text-sm font-semibold text-slate-700">Nombre de empresa *</label>
+              <input id="nombre_empresa" type="text" required placeholder="Ej. Distribuciones Andinas S.A."
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+
+            <div>
+              <label class="text-sm font-semibold text-slate-700">Email *</label>
+              <input id="email" type="email" required placeholder="compras@empresa.com"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+
+            <div>
+              <label class="text-sm font-semibold text-slate-700">Contraseña *</label>
+              <input id="password" type="password" required placeholder="Mínimo 8 caracteres"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+
+            <div>
+              <label class="text-sm font-semibold text-slate-700">País *</label>
+              <input id="pais" type="text" required placeholder="Ej. Colombia"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+
+            <div>
+              <label class="text-sm font-semibold text-slate-700">Teléfono</label>
+              <input id="telefono" type="tel" placeholder="+57 300 000 0000"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-sm font-semibold text-slate-700">Dirección</label>
+              <input id="direccion" type="text" placeholder="Dirección de facturación o despacho"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200" />
+            </div>
+
+            <div class="sm:col-span-2">
+              <button id="registro-submit" type="submit"
+                class="gm-press w-full rounded-xl bg-blue-600 text-white px-4 py-3 font-semibold hover:bg-blue-700 transition shadow-sm">
+                Crear cuenta
+              </button>
+              <div class="mt-3 text-xs text-slate-500">
+                Al registrarte aceptas las políticas de uso y privacidad de GlobMarket B2B.
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="mt-4 text-xs text-slate-500 text-center">
+          ¿Ya tienes cuenta? <a href="/pages/login.html" class="text-blue-700 font-semibold hover:text-blue-800">Inicia sesión</a>.
+        </div>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/js/app.js?v=3"></script>
+  </body>
+</html>
+

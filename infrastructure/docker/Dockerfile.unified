@@ -1,0 +1,36 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY apps/admin/requirements.txt /tmp/req-admin.txt
+COPY apps/portal/requirements.txt /tmp/req-portal.txt
+RUN pip install --no-cache-dir -r /tmp/req-admin.txt -r /tmp/req-portal.txt
+
+COPY apps/admin/backend /app/apps/admin/backend
+COPY apps/admin/web /app/apps/admin/web
+COPY apps/portal/gmbackend /app/apps/portal/gmbackend
+COPY apps/portal/web /app/apps/portal/web
+COPY shared /app/shared
+COPY data /app/data
+COPY run.py /app/run.py
+COPY scripts/reset_demo_passwords.py /app/scripts/reset_demo_passwords.py
+COPY infrastructure/docker/entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh \
+    && chmod +x /entrypoint.sh \
+    && mkdir -p /app/db /app/shared/storage
+
+# Dockerfile apps: también monta etl-airflow para publish vía shared
+COPY etl-airflow/dags /app/etl-airflow/dags
+ENV PYTHONPATH=/app:/app/apps/admin:/app/apps/portal:/app/etl-airflow/dags
+ENV PYTHONUNBUFFERED=1
+ENV DUCKDB_PATH=/app/db/globtrade.duckdb
+ENV PARQUET_PATH=/app/data/ventas.parquet
+
+EXPOSE 8000 8001
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python", "/app/run.py"]

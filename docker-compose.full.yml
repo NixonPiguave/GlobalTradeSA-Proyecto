@@ -1,0 +1,189 @@
+# GlobalTrade S.A. — stack completo: apps + ClickHouse + Airflow (Postgres metadata)
+# Uso: docker compose -f docker-compose.full.yml up --build -d
+
+x-airflow-env: &airflow_env
+  AIRFLOW_HOME: /opt/airflow
+  AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+  AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+  AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+  AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY:-globtrade-dev-secret}
+  AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth
+  DUCKDB_PATH: /proyecto/db/globtrade.duckdb
+  DATA_DIR: /proyecto/data
+  PYTHONPATH: /proyecto:/opt/airflow/dags
+  CLICKHOUSE_HOST: clickhouse
+  CLICKHOUSE_PORT: "8123"
+  CLICKHOUSE_USER: default
+  CLICKHOUSE_PASSWORD: globtrade
+  CLICKHOUSE_DB: globtrade_dwh
+  ETL_ESTRATEGIA: incremental
+  GLOBALTRADE_ETL_VIA_API: "1"
+  GLOBALTRADE_API_URL: http://globaltrade-apps:8000
+  ETL_INTERNAL_TOKEN: globtrade-etl-dev
+
+x-airflow-volumes: &airflow_volumes
+  - airflow_home:/opt/airflow
+  - ./etl-airflow/dags:/opt/airflow/dags
+  - ./etl-airflow/scripts:/opt/airflow/scripts
+  - .:/proyecto:rw
+  - duckdb_data:/proyecto/db
+
+services:
+  globaltrade-apps:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.unified
+    container_name: globaltrade-apps
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    environment:
+      DUCKDB_PATH: /app/db/globtrade.duckdb
+      PARQUET_PATH: /app/data/ventas.parquet
+      DUCKDB_READONLY: ${DUCKDB_READONLY:-false}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: "60"
+      CORS_ORIGINS: http://localhost:8001,http://127.0.0.1:8001
+      POCKETBASE_SYNC_ON_STARTUP: "false"
+      IA_API_KEY: ${IA_API_KEY:-}
+      IA_BASE_URL: ${IA_BASE_URL:-https://api.groq.com/openai/v1}
+      IA_MODEL: ${IA_MODEL:-llama-3.3-70b-versatile}
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: "8123"
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: globtrade
+      CLICKHOUSE_DB: globtrade_dwh
+      ETL_INTERNAL_TOKEN: globtrade-etl-dev
+    volumes:
+      - duckdb_data:/app/db
+      - ./data:/app/data:ro
+      - ./shared/storage:/app/shared/storage
+      # Backend + frontend: cambios locales sin rebuild de imagen
+      - ./apps/portal/gmbackend:/app/apps/portal/gmbackend:ro
+      - ./apps/admin/backend:/app/apps/admin/backend:ro
+      - ./shared:/app/shared:ro
+      - ./etl-airflow/dags:/app/etl-airflow/dags:ro
+      - ./apps/portal/web:/app/apps/portal/web:ro
+      - ./apps/admin/web:/app/apps/admin/web:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5); urllib.request.urlopen('http://127.0.0.1:8001/api/productos/categorias', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: globaltrade-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_DB: globtrade_dwh
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: globtrade
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./infrastructure/clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  airflow-postgres:
+    image: postgres:15
+    container_name: globaltrade-airflow-pg
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  airflow-init:
+    build:
+      context: ./etl-airflow
+    image: globtrade-airflow:2.10.5
+    container_name: globaltrade-airflow-init
+    environment: *airflow_env
+    volumes: *airflow_volumes
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate
+        airflow users create --username "$${AIRFLOW_ADMIN_USER:-globtrade_admin}" \
+          --firstname Admin --lastname GlobalTrade --role Admin \
+          --email admin@globtrade.sa --password "$${AIRFLOW_ADMIN_PASSWORD:-12345678}" || true
+
+  airflow-webserver:
+    build:
+      context: ./etl-airflow
+    image: globtrade-airflow:2.10.5
+    container_name: globaltrade-airflow-webserver
+    ports:
+      - "8080:8080"
+    environment: *airflow_env
+    volumes: *airflow_volumes
+    command: bash /opt/airflow/scripts/entrypoint.sh webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+    restart: unless-stopped
+
+  airflow-scheduler:
+    build:
+      context: ./etl-airflow
+    image: globtrade-airflow:2.10.5
+    container_name: globaltrade-airflow-scheduler
+    environment: *airflow_env
+    volumes: *airflow_volumes
+    command: bash /opt/airflow/scripts/entrypoint.sh scheduler
+    depends_on:
+      airflow-webserver:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  clickhouse_data:
+  airflow_home:
+  airflow_pg_data:
+  duckdb_data:

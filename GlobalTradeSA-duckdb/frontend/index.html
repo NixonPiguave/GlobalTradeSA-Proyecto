@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLOBTRADE S.A. — Dashboard Ejecutivo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%233b82f6'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-size='16' fill='white' font-family='sans-serif'%3EG%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/css/app.css?v=18">
+  <script>
+    (function () {
+      var t = localStorage.getItem('globtrade-theme');
+      document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+    })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <h1>GLOBTRADE S.A.</h1>
+      <span>Comercio Internacional</span>
+    </div>
+    <nav class="nav-list">
+      <button class="nav-item active" data-page="dashboard">Dashboard</button>
+      <button class="nav-item" data-page="ventas">Ventas</button>
+      <button class="nav-item" data-page="regiones">Regiones</button>
+      <button class="nav-item" data-page="paises">Países</button>
+      <button class="nav-item" data-page="tipos-producto">Tipos de Producto</button>
+      <button class="nav-item" data-page="canales">Canales</button>
+      <button class="nav-item" data-page="prioridades">Prioridades</button>
+      <button class="nav-item" data-page="generador">Generador / ETL</button>
+    </nav>
+  </aside>
+
+  <main id="main">
+    <header id="topbar">
+      <button id="menu-toggle" aria-label="Menú">☰</button>
+      <h2 id="page-title">Dashboard Ejecutivo</h2>
+      <div class="topbar-actions">
+        <div class="theme-toggle" role="group" aria-label="Tema de interfaz">
+          <button type="button" class="theme-option" data-theme-pick="dark" aria-pressed="true" title="Modo oscuro">
+            <span class="theme-icon" aria-hidden="true">◐</span> Oscuro
+    </button>
+          <button type="button" class="theme-option" data-theme-pick="light" aria-pressed="false" title="Modo claro">
+            <span class="theme-icon" aria-hidden="true">○</span> Claro
+    </button>
+  </div>
+        <span class="meta">DuckDB · Alto rendimiento</span>
+      </div>
+    </header>
+
+    <div id="content">
+      <!-- Dashboard -->
+      <section id="page-dashboard" class="page active">
+        <div class="filters">
+          <div class="field"><label>Desde</label><input type="date" id="dash-from"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="dash-to"></div>
+          <div class="field"><label>Región</label><select id="dash-region"><option value="">Todas</option></select></div>
+          <button class="btn btn-primary" id="dash-apply">Aplicar</button>
+          <span class="dash-hint">Pulsa Aplicar para cargar KPIs y gráficas</span>
+        </div>
+      <div class="kpi-grid">
+          <div class="kpi-card"><div class="label">Ingresos totales</div><div class="value" id="kpi-revenue">—</div></div>
+          <div class="kpi-card"><div class="label">Profit total</div><div class="value profit" id="kpi-profit">—</div></div>
+          <div class="kpi-card"><div class="label">Margen %</div><div class="value" id="kpi-margin">—</div></div>
+          <div class="kpi-card"><div class="label">Unidades</div><div class="value" id="kpi-units">—</div></div>
+        </div>
+        <div class="charts-grid">
+          <div class="card"><div class="card-title">Por región</div><div class="chart-wrap"><canvas id="chart-region"></canvas></div></div>
+          <div class="card"><div class="card-title">Por canal</div><div class="chart-wrap"><canvas id="chart-canal"></canvas></div></div>
+          <div class="card"><div class="card-title">Por producto</div><div class="chart-wrap"><canvas id="chart-item"></canvas></div></div>
+          <div class="card wide"><div class="card-title">Ingresos vs Profit por producto</div><div class="chart-wrap tall"><canvas id="chart-rp-product"></canvas></div></div>
+          <div class="card wide"><div class="card-title">Evolución de ventas (mensual)</div><div class="chart-wrap tall"><canvas id="chart-mes"></canvas></div></div>
+          <div class="card"><div class="card-title">Distribución por canal</div><div class="chart-wrap"><canvas id="chart-dona-canal"></canvas></div></div>
+          <div class="card wide"><div class="card-title">Top 10 países por ingresos</div><div class="chart-wrap tall"><canvas id="chart-top10-pais"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Top 5 países por ganancia</div>
+          <div class="table-wrap">
+            <table class="table-top-paises">
+              <colgroup>
+                <col class="col-pais"><col class="col-region"><col class="col-profit">
+                <col class="col-revenue"><col class="col-margen">
+              </colgroup>
+              <thead><tr><th>País</th><th>Región</th><th>Profit</th><th>Ingresos</th><th>Margen</th></tr></thead>
+              <tbody id="top-paises-body"></tbody>
+            </table>
+        </div>
+          <p class="query-time" id="dash-query-time"></p>
+        </div>
+      </section>
+
+      <!-- Ventas -->
+      <section id="page-ventas" class="page">
+        <div class="filters">
+          <div class="field field-search"><label>Buscar</label><input id="v-q" type="search" placeholder="Order ID, país, región o producto..."></div>
+          <div class="field"><label>Región</label><select id="v-region"><option value="">Todos</option></select></div>
+          <div class="field"><label>País</label><select id="v-country"><option value="">Todos</option></select></div>
+          <div class="field"><label>Producto</label><select id="v-item_type"><option value="">Todos</option></select></div>
+          <div class="field"><label>Canal</label><select id="v-sales_channel"><option value="">Todos</option></select></div>
+          <div class="field"><label>Prioridad</label><select id="v-order_priority"><option value="">Todos</option></select></div>
+          <div class="field"><label>Desde</label><input type="date" id="v-from"></div>
+          <div class="field"><label>Hasta</label><input type="date" id="v-to"></div>
+          <button class="btn btn-primary" id="ventas-search">Buscar</button>
+          <button class="btn btn-secondary" id="ventas-export">Exportar CSV</button>
+        </div>
+        <div class="ventas-actions">
+          <button class="btn btn-primary" id="ventas-new">+ Nueva venta</button>
+          <button class="btn btn-danger" id="ventas-truncate-btn">🗑️ Borrar todos los registros</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Total: <span id="ventas-total">0</span></div>
+          <div class="table-wrap">
+            <table class="table-ventas"><thead><tr>
+              <th>ID</th><th>Order ID</th><th>Región</th><th>País</th><th>Producto</th>
+              <th>Canal</th><th>Prioridad</th><th>F. pedido</th><th>F. envío</th>
+              <th>Unidades</th><th>P. unit.</th><th>C. unit.</th>
+              <th>Ingresos</th><th>Costo total</th><th>Profit</th><th></th>
+            </tr></thead><tbody id="ventas-body"></tbody></table>
+        </div>
+          <p class="query-time" id="ventas-query-time"></p>
+          <div class="pagination">
+            <button class="btn btn-secondary" id="ventas-prev">Anterior</button>
+            <span id="ventas-page-info"></span>
+            <button class="btn btn-secondary" id="ventas-next">Siguiente</button>
+        </div>
+      </div>
+    </section>
+
+      <!-- Maestras -->
+      <section id="page-regiones" class="page">
+        <div class="filters">
+          <div class="field"><label>Buscar</label><input id="regiones-q"></div>
+          <button class="btn btn-primary" id="regiones-search">Buscar</button>
+          <button class="btn btn-success" id="regiones-new">Nuevo</button>
+        </div>
+        <div class="card"><div class="card-title">Total: <span id="maestra-regiones-total">0</span></div>
+          <div class="table-wrap"><table><thead><tr id="maestra-regiones-head"></tr></thead><tbody id="maestra-regiones-body"></tbody></table></div>
+          <p class="query-time" id="maestra-regiones-time"></p>
+        </div>
+      </section>
+
+      <section id="page-paises" class="page">
+        <div class="filters">
+          <div class="field"><label>Buscar</label><input id="paises-q"></div>
+          <button class="btn btn-primary" id="paises-search">Buscar</button>
+          <button class="btn btn-success" id="paises-new">Nuevo</button>
+        </div>
+        <div class="card"><div class="card-title">Total: <span id="maestra-paises-total">0</span></div>
+          <div class="table-wrap"><table><thead><tr id="maestra-paises-head"></tr></thead><tbody id="maestra-paises-body"></tbody></table></div>
+          <p class="query-time" id="maestra-paises-time"></p>
+        </div>
+      </section>
+
+      <section id="page-tipos-producto" class="page">
+        <div class="filters">
+          <div class="field"><label>Buscar</label><input id="tipos-producto-q"></div>
+          <button class="btn btn-primary" id="tipos-producto-search">Buscar</button>
+          <button class="btn btn-success" id="tipos-producto-new">Nuevo</button>
+        </div>
+        <div class="card"><div class="card-title">Total: <span id="maestra-tipos-producto-total">0</span></div>
+          <div class="table-wrap"><table><thead><tr id="maestra-tipos-producto-head"></tr></thead><tbody id="maestra-tipos-producto-body"></tbody></table></div>
+          <p class="query-time" id="maestra-tipos-producto-time"></p>
+      </div>
+    </section>
+
+      <section id="page-canales" class="page">
+        <div class="filters">
+          <div class="field"><label>Buscar</label><input id="canales-q"></div>
+          <button class="btn btn-primary" id="canales-search">Buscar</button>
+          <button class="btn btn-success" id="canales-new">Nuevo</button>
+        </div>
+        <div class="card"><div class="card-title">Total: <span id="maestra-canales-total">0</span></div>
+          <div class="table-wrap"><table><thead><tr id="maestra-canales-head"></tr></thead><tbody id="maestra-canales-body"></tbody></table></div>
+          <p class="query-time" id="maestra-canales-time"></p>
+        </div>
+      </section>
+
+      <section id="page-prioridades" class="page">
+        <div class="filters">
+          <div class="field"><label>Buscar</label><input id="prioridades-q"></div>
+          <button class="btn btn-primary" id="prioridades-search">Buscar</button>
+          <button class="btn btn-success" id="prioridades-new">Nuevo</button>
+        </div>
+        <div class="card"><div class="card-title">Total: <span id="maestra-prioridades-total">0</span></div>
+          <div class="table-wrap"><table><thead><tr id="maestra-prioridades-head"></tr></thead><tbody id="maestra-prioridades-body"></tbody></table></div>
+          <p class="query-time" id="maestra-prioridades-time"></p>
+        </div>
+      </section>
+
+      <!-- Generador / ETL -->
+      <section id="page-generador" class="page">
+        <p class="gen-db-stats">Registros en <strong>fact_ventas</strong>: <span id="gen-ventas-total">—</span></p>
+        <label class="gen-goto-ventas-wrap">
+          <input type="checkbox" id="gen-goto-ventas" checked>
+          Ir a Ventas al terminar con éxito
+        </label>
+        <div class="generador-panels">
+          <div class="generador-panel">
+            <h4>⚙️ Generar ventas sintéticas</h4>
+            <p>Crea ventas de ejemplo en gran volumen para pruebas o demostraciones.</p>
+            <div class="field" style="margin:1rem auto;max-width:200px">
+              <label>Cantidad</label>
+              <input type="number" id="gen-cantidad" value="100000" min="1" max="1000000" step="1000">
+            </div>
+            <button type="button" class="btn btn-primary" id="gen-btn">
+              <span class="btn-spinner loader" hidden aria-hidden="true"></span>
+              <span class="btn-label">Generar ventas</span>
+            </button>
+            <p class="gen-result" id="gen-result"></p>
+            </div>
+          <div class="generador-panel">
+            <h4>📂 Importar ventas.parquet</h4>
+            <p>Carga al sistema las ventas del archivo parquet; no repite pedidos ya existentes.</p>
+            <button type="button" class="btn btn-success" id="import-parquet-btn" style="margin-top:1rem">
+              <span class="btn-spinner loader" hidden aria-hidden="true"></span>
+              <span class="btn-label">Importar ventas.parquet</span>
+            </button>
+            <p class="gen-result" id="import-result"></p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Modal CRUD -->
+  <div id="modal-overlay" class="modal-overlay">
+    <div id="modal" class="modal">
+      <h3 id="modal-title">Formulario</h3>
+      <div id="modal-form" class="form-grid"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="modal-cancel">Cancelar</button>
+        <button class="btn btn-primary" id="modal-save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+  <!-- Modal truncate -->
+  <div id="truncate-overlay" class="modal-overlay">
+    <div class="modal modal-danger">
+      <h3>⚠️ Borrar todos los registros</h3>
+      <p>¿Estás seguro? Esta acción borrará todos los registros de <strong>fact_ventas</strong>. Escribe <strong>CONFIRMAR</strong> para continuar.</p>
+      <div class="field">
+        <input type="text" id="truncate-confirm" placeholder="CONFIRMAR" autocomplete="off">
+    </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="truncate-cancel">Cancelar</button>
+        <button class="btn btn-danger" id="truncate-ok" disabled>Eliminar todo</button>
+    </div>
+  </div>
+</div>
+
+  <div id="gen-op-overlay" class="gen-op-overlay" hidden aria-live="assertive">
+    <div class="gen-op-card" id="gen-op-card">
+      <p id="gen-op-message"></p>
+      <div class="gen-op-actions">
+        <button type="button" class="btn btn-secondary" id="gen-op-close">Cerrar</button>
+        <button type="button" class="btn btn-primary" id="gen-op-ventas" hidden>Ver ventas</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/js/app.js?v=17"></script>
+</body>
+</html>

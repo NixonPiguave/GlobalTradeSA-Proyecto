@@ -1,0 +1,40 @@
+# LEGACY — Airflow standalone (duplicado).
+# Usar en su lugar: docker compose -f ../docker-compose.full.yml up -d
+# Este compose queda bajo perfil "legacy-airflow" para no arrancar por accidente.
+
+services:
+  webserver:
+    profiles: ["legacy-airflow"]
+    build: .
+    image: globtrade-airflow:2.10.5
+    container_name: globtrade-airflow-webserver
+    ports:
+      - "8080:8080"
+    environment: &airflow_env
+      AIRFLOW_HOME: /opt/airflow
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      DUCKDB_PATH: /proyecto/db/globtrade.duckdb
+      DATA_DIR: /proyecto/data
+    volumes: &airflow_volumes
+      - airflow_home:/opt/airflow
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ..:/proyecto:rw
+    command: bash /opt/airflow/scripts/entrypoint.sh webserver
+    restart: "no"
+
+  scheduler:
+    profiles: ["legacy-airflow"]
+    build: .
+    image: globtrade-airflow:2.10.5
+    container_name: globtrade-airflow-scheduler
+    environment: *airflow_env
+    volumes: *airflow_volumes
+    command: bash /opt/airflow/scripts/entrypoint.sh scheduler
+    restart: "no"
+
+volumes:
+  airflow_home:

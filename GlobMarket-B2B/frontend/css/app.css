@@ -1,0 +1,124 @@
+/* GlobMarket B2B — refinamientos de interfaz (UI/UX + responsive).
+   Tailwind se carga por CDN; aqui solo van detalles transversales de pulido. */
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Seleccion de texto con color de marca */
+::selection {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+/* Foco accesible y consistente al navegar con teclado */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+
+/* Scrollbar discreto y moderno */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  background-clip: content-box;
+}
+
+/* Sin flash gris al tocar en moviles */
+a,
+button,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Imagenes siempre responsivas */
+img {
+  max-width: 100%;
+}
+
+/* Evita el zoom involuntario en iOS cuando el input es pequeno */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Tarjetas interactivas: leve elevacion al pasar el cursor */
+.gm-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
+}
+@media (hover: hover) {
+  .gm-card:hover {
+    transform: translateY(-3px);
+  }
+}
+
+/* Boton primario: ligera respuesta al pulsar */
+.gm-press:active {
+  transform: translateY(1px);
+}
+
+/* Oculta el marcador por defecto de <summary> */
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Header: evita desbordamiento de la navegacion en pantallas muy pequenas */
+@media (max-width: 400px) {
+  header nav a,
+  header nav button {
+    padding-left: 0.6rem;
+    padding-right: 0.6rem;
+    font-size: 13px;
+  }
+}
+
+/* Respeta a quienes prefieren menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

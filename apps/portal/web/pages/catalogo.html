@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Productos — GlobMarket B2B</title>
+    <meta name="description" content="Catálogo B2B. Compra unitaria o por volumen; filtra por precio, marca y línea." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui'], display: ['Manrope', 'IBM Plex Sans', 'sans-serif'] },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="/css/app.css?v=81" />
+  </head>
+  <body class="font-sans text-slate-800">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+    <header class="gm-header sticky top-0 z-40"></header>
+
+    <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+      <div class="flex flex-col lg:flex-row gap-6">
+        <aside class="lg:w-64 shrink-0">
+          <details id="filtros" open class="group lg:sticky lg:top-[4.5rem] gm-filter-shell">
+            <summary class="lg:hidden cursor-pointer flex items-center justify-between gap-3 px-4 py-3">
+              <span class="text-sm font-bold text-slate-800">Filtros</span>
+              <span class="text-xs text-slate-500">Abrir</span>
+            </summary>
+            <div class="px-1 pb-1">
+              <div class="hidden lg:block text-sm font-bold text-slate-800 px-3 pt-3">Filtros</div>
+              <div id="categorias-sidebar"></div>
+            </div>
+          </details>
+        </aside>
+
+        <section class="flex-1 min-w-0">
+          <div>
+            <h1 class="text-xl font-bold font-display tracking-tight" style="color:#3d4f6f">Productos</h1>
+            <p class="mt-1 text-sm text-slate-500">Usa la búsqueda del encabezado o los filtros laterales (precio, marca, línea, categoría).</p>
+          </div>
+          <div id="productos-grid" class="mt-5 grid sm:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+          <div id="productos-pager" class="mt-6"></div>
+        </section>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/js/app.js?v=91"></script>
+    <script src="/js/carrito.js?v=82"></script>
+  </body>
+</html>

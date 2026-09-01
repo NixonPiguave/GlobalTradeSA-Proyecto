@@ -1,0 +1,503 @@
+"""
+maestras.py — CRUD para dimensiones del modelo estrella DuckDB.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, Optional
+
+import duckdb
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from backend.database import get_connection, execute_query, notify_db_changed
+from backend.middleware.authz import require_perm
+from backend.models.validators import (
+    validate_pagination_maestras,
+    validate_sort_by_maestra,
+    validate_sort_order,
+    MAESTRAS_COLUMNS,
+)
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+_TABLE_MAP: dict[str, str] = {
+    "regiones": "dim_region",
+    "paises": "dim_country",
+    "tipos-producto": "dim_item_type",
+    "canales": "dim_sales_channel",
+    "prioridades": "dim_order_priority",
+}
+
+_PK_COLUMN: dict[str, str] = {
+    "regiones": "id_region",
+    "paises": "id_country",
+    "tipos-producto": "id_item_type",
+    "canales": "id_channel",
+    "prioridades": "id_priority",
+}
+
+_REQUIRED_FIELDS: dict[str, list[str]] = {
+    "regiones": ["region"],
+    "paises": ["country", "id_region"],
+    "tipos-producto": ["item_type", "unit_price", "unit_cost"],
+    "canales": ["sales_channel"],
+    "prioridades": ["order_priority"],
+}
+
+_OPTIONAL_FIELDS: dict[str, list[str]] = {
+    "prioridades": ["descripcion"],
+}
+
+_TEXT_COLUMNS: dict[str, list[str]] = {
+    "regiones": ["region"],
+    "paises": ["country"],
+    "tipos-producto": ["item_type"],
+    "canales": ["sales_channel"],
+    "prioridades": ["order_priority"],
+}
+
+_PRIORIDAD_DESCRIPCIONES: dict[str, str] = {
+    "C": "Crítica — máxima urgencia, atención inmediata",
+    "H": "Alta — prioridad elevada",
+    "M": "Media — plazo estándar",
+    "L": "Baja — puede demorarse sin impacto grave",
+}
+
+VALID_TABLES: frozenset[str] = frozenset(_TABLE_MAP.keys())
+
+_READONLY_MAESTRAS: frozenset[str] = frozenset({"regiones", "paises", "canales"})
+
+
+def _assert_maestra_editable(tabla: str) -> None:
+    if tabla in _READONLY_MAESTRAS:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": 403,
+                "message": f"La dimensión «{tabla}» es de solo lectura (catálogo maestro del sistema).",
+            },
+        )
+
+
+def _physical_table(tabla: str) -> str:
+    return _TABLE_MAP[tabla]
+
+
+def _validate_tabla(tabla: str) -> None:
+    if tabla not in VALID_TABLES:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": 400,
+                "message": f"Tabla '{tabla}' no es válida.",
+                "detail": f"Tablas válidas: {sorted(VALID_TABLES)}.",
+            },
+        )
+
+
+def _validate_required_fields(tabla: str, body: dict[str, Any]) -> None:
+    required = _REQUIRED_FIELDS[tabla]
+    missing = [f for f in required if f not in body or body[f] is None]
+    if missing:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": 422,
+                "message": "Faltan campos obligatorios.",
+                "detail": [{"field": f, "reason": "Campo obligatorio ausente."} for f in missing],
+            },
+        )
+
+
+def _validate_maestra_business(tabla: str, body: dict[str, Any], conn, *, id_actual: int | None = None) -> None:
+    """Reglas de negocio de maestras: valores únicos, límites y no negativos."""
+    if tabla == "prioridades":
+        valor = str(body.get("order_priority") or "").strip().upper()
+        if len(valor) != 1 or not valor.isalpha():
+            raise HTTPException(
+                status_code=422,
+                detail={"code": 422, "message": "La prioridad debe ser una única letra (A-Z)."},
+            )
+        body["order_priority"] = valor
+        desc = body.get("descripcion")
+        if desc is not None:
+            desc = str(desc).strip()
+            if len(desc) > 160:
+                raise HTTPException(status_code=422, detail={"code": 422, "message": "La descripción no puede superar 160 caracteres."})
+            body["descripcion"] = desc or _PRIORIDAD_DESCRIPCIONES.get(valor, "")
+        row = execute_query(
+            conn,
+            "SELECT id_priority FROM dim_order_priority WHERE UPPER(order_priority) = ? AND COALESCE(id_priority, 0) <> COALESCE(?, 0)",
+            (valor, id_actual),
+            fetch="one",
+        )
+        if row:
+            raise HTTPException(status_code=409, detail={"code": 409, "message": "Esa prioridad ya existe."})
+    elif tabla == "paises":
+        valor = str(body.get("country") or "").strip()
+        if len(valor) < 2 or len(valor) > 120:
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "El nombre del país debe tener entre 2 y 120 caracteres."})
+        id_region = body.get("id_region")
+        if id_region is None:
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "Debe asignar una región al país."})
+        try:
+            id_region_int = int(id_region)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "La región seleccionada no es válida."})
+        reg = execute_query(conn, "SELECT 1 FROM dim_region WHERE id_region = ?", (id_region_int,), fetch="one")
+        if not reg:
+            raise HTTPException(status_code=422, detail={"code": 422, "message": f"La región {id_region} no existe."})
+        body["id_region"] = id_region_int
+        row = execute_query(
+            conn,
+            "SELECT id_country FROM dim_country WHERE LOWER(country) = LOWER(?) AND COALESCE(id_country, 0) <> COALESCE(?, 0)",
+            (valor, id_actual),
+            fetch="one",
+        )
+        if row:
+            raise HTTPException(status_code=409, detail={"code": 409, "message": "Ese país ya existe (no distingue mayúsculas ni minúsculas)."})
+    elif tabla == "tipos-producto":
+        for campo, etiqueta in (("unit_price", "precio unitario"), ("unit_cost", "costo unitario")):
+            val = body.get(campo)
+            try:
+                numero = float(val)
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=422, detail={"code": 422, "message": f"El {etiqueta} debe ser un número."})
+            if numero <= 0:
+                raise HTTPException(status_code=422, detail={"code": 422, "message": f"El {etiqueta} debe ser mayor a 0."})
+        if float(body.get("unit_cost") or 0) > float(body.get("unit_price") or 0):
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "El costo no puede superar el precio unitario."})
+        valor = str(body.get("item_type") or "").strip()
+        if not valor:
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "El nombre del tipo de producto es obligatorio."})
+        if len(valor) < 2:
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "El nombre del tipo de producto debe tener al menos 2 caracteres."})
+    elif tabla == "regiones":
+        valor = str(body.get("region") or "").strip()
+        if not valor or len(valor) < 2:
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "El nombre de la región debe tener al menos 2 caracteres."})
+        row = execute_query(
+            conn,
+            "SELECT id_region FROM dim_region WHERE LOWER(region) = LOWER(?) AND COALESCE(id_region, 0) <> COALESCE(?, 0)",
+            (valor, id_actual),
+            fetch="one",
+        )
+        if row:
+            raise HTTPException(status_code=409, detail={"code": 409, "message": "Esa región ya existe (no distingue mayúsculas ni minúsculas)."})
+    elif tabla == "canales":
+        valor = str(body.get("sales_channel") or "").strip()
+        if not valor or len(valor) < 2:
+            raise HTTPException(status_code=422, detail={"code": 422, "message": "El nombre del canal debe tener al menos 2 caracteres."})
+        row = execute_query(
+            conn,
+            "SELECT id_channel FROM dim_sales_channel WHERE LOWER(sales_channel) = LOWER(?) AND COALESCE(id_channel, 0) <> COALESCE(?, 0)",
+            (valor, id_actual),
+            fetch="one",
+        )
+        if row:
+            raise HTTPException(status_code=409, detail={"code": 409, "message": "Ese canal ya existe (no distingue mayúsculas ni minúsculas)."})
+
+
+def _row_to_dict(row: tuple, columns: list[str]) -> dict[str, Any]:
+    return {col: val for col, val in zip(columns, row)}
+
+
+def _get_column_names(conn, physical: str) -> list[str]:
+    sql = """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = ?
+          AND table_schema = 'main'
+        ORDER BY ordinal_position
+    """
+    rows = execute_query(conn, sql, (physical,), fetch="all")
+    return [r[0] for r in rows]
+
+
+def _next_id(conn, physical: str, pk_col: str) -> int:
+    row = execute_query(conn, f"SELECT COALESCE(MAX({pk_col}), 0) + 1 FROM {physical}", fetch="one")
+    return int(row[0])
+
+
+@router.get("/filtros", summary="Todas las dimensiones para filtros (una sola petición)")
+def get_filtros(
+    _: dict = Depends(require_perm(
+        "mod.catalogo", "mod.gobierno", "mod.dashboard", "mod.ventas",
+        "mod.reportes", "mod.clientes", "mod.inventario", "mod.compras",
+    ))
+) -> dict[str, list[dict[str, Any]]]:
+    """Evita 5 GET paralelos desde el frontend (límite de conexiones del navegador)."""
+    with get_connection() as conn:
+        regiones = execute_query(
+            conn, "SELECT id_region, region FROM dim_region ORDER BY region", fetch="all"
+        ) or []
+        paises = execute_query(
+            conn,
+            "SELECT id_country, country, id_region FROM dim_country ORDER BY country",
+            fetch="all",
+        ) or []
+        tipos = execute_query(
+            conn,
+            "SELECT id_item_type, item_type, unit_price, unit_cost FROM dim_item_type ORDER BY item_type",
+            fetch="all",
+        ) or []
+        canales = execute_query(
+            conn,
+            "SELECT id_channel, sales_channel FROM dim_sales_channel ORDER BY sales_channel",
+            fetch="all",
+        ) or []
+        prioridades = execute_query(
+            conn,
+            """
+            SELECT id_priority, order_priority,
+                   COALESCE(descripcion, '') AS descripcion
+            FROM dim_order_priority ORDER BY order_priority
+            """,
+            fetch="all",
+        ) or []
+
+    return {
+        "regiones": [{"id_region": r[0], "region": r[1]} for r in regiones],
+        "paises": [{"id_country": p[0], "country": p[1], "id_region": p[2]} for p in paises],
+        "tipos": [
+            {"id_item_type": t[0], "item_type": t[1], "unit_price": t[2], "unit_cost": t[3]}
+            for t in tipos
+        ],
+        "canales": [{"id_channel": c[0], "sales_channel": c[1]} for c in canales],
+        "prioridades": [
+            {"id_priority": p[0], "order_priority": p[1], "descripcion": p[2] or _PRIORIDAD_DESCRIPCIONES.get(str(p[1]).upper(), "")}
+            for p in prioridades
+        ],
+    }
+
+
+@router.get("/{tabla}/")
+@router.get("/{tabla}", include_in_schema=False)
+def list_records(
+    tabla: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=500),
+    search: Optional[str] = Query(default=None),
+    id_region: Optional[int] = Query(default=None, description="Filtrar países por región"),
+    macro_zona: Optional[str] = Query(default=None, description="Filtrar países por macro-zona (americas|emea|apac)"),
+    sort_by: Optional[str] = Query(default=None),
+    sort_order: str = Query(default="asc"),
+    _: dict = Depends(require_perm("mod.catalogo")),
+) -> dict:
+    _validate_tabla(tabla)
+    validate_pagination_maestras(page, page_size)
+    sort_order_validated = validate_sort_order(sort_order)
+    pk_col = _PK_COLUMN[tabla]
+    sort_col = validate_sort_by_maestra(sort_by, tabla) if sort_by else pk_col
+    physical = _physical_table(tabla)
+    offset = (page - 1) * page_size
+
+    with get_connection() as conn:
+        col_names = _get_column_names(conn, physical)
+        where_clause = ""
+        params: list[Any] = []
+        text_cols = _TEXT_COLUMNS.get(tabla, [])
+        if tabla == "paises":
+            conditions: list[str] = []
+            if id_region is not None:
+                conditions.append("id_region = ?")
+                params.append(id_region)
+            elif macro_zona:
+                from shared.services.red_bodegas import MACRO_BY_REGION
+
+                macro = macro_zona.strip().lower()
+                region_ids = [rid for rid, mz in MACRO_BY_REGION.items() if mz == macro]
+                if region_ids:
+                    placeholders = ", ".join(["?"] * len(region_ids))
+                    conditions.append(f"id_region IN ({placeholders})")
+                    params.extend(region_ids)
+            if search and text_cols:
+                search_cond = " OR ".join([f"{col} ILIKE ?" for col in text_cols])
+                conditions.append(f"({search_cond})")
+                params.extend([f"%{search}%"] * len(text_cols))
+            if conditions:
+                where_clause = "WHERE " + " AND ".join(conditions)
+        elif search and text_cols:
+            conditions = [f"{col} ILIKE ?" for col in text_cols]
+            where_clause = "WHERE " + " OR ".join(conditions)
+            params.extend([f"%{search}%"] * len(text_cols))
+
+        count_sql = f"SELECT COUNT(*) FROM {physical} {where_clause}"
+        count_row = execute_query(conn, count_sql, params if params else None, fetch="one")
+        total = count_row[0] if count_row else 0
+
+        data_sql = (
+            f"SELECT * FROM {physical} {where_clause} "
+            f"ORDER BY {sort_col} {sort_order_validated.upper()} "
+            f"LIMIT ? OFFSET ?"
+        )
+        rows = execute_query(conn, data_sql, params + [page_size, offset], fetch="all")
+        data = [_row_to_dict(row, col_names) for row in rows] if rows else []
+
+    return {
+        "data": data,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": max(1, -(-total // page_size)) if total else 1,
+    }
+
+
+@router.get("/{tabla}/{id}/")
+@router.get("/{tabla}/{id}", include_in_schema=False)
+def get_record(tabla: str, id: int, _: dict = Depends(require_perm("mod.catalogo"))) -> dict:
+    _validate_tabla(tabla)
+    physical = _physical_table(tabla)
+    pk_col = _PK_COLUMN[tabla]
+    sql = f"SELECT * FROM {physical} WHERE {pk_col} = ?"
+
+    with get_connection() as conn:
+        col_names = _get_column_names(conn, physical)
+        row = execute_query(conn, sql, (id,), fetch="one")
+
+    if row is None:
+        raise HTTPException(status_code=404, detail={"code": 404, "message": f"Registro {id} no encontrado."})
+
+    return _row_to_dict(row, col_names)
+
+
+@router.post("/{tabla}/", status_code=201)
+@router.post("/{tabla}", status_code=201, include_in_schema=False)
+def create_record(tabla: str, body: dict[str, Any], _: dict = Depends(require_perm("mod.catalogo"))) -> dict:
+    _validate_tabla(tabla)
+    _assert_maestra_editable(tabla)
+    _validate_required_fields(tabla, body)
+    physical = _physical_table(tabla)
+    pk_col = _PK_COLUMN[tabla]
+    insert_data = {k: v for k, v in body.items() if k != pk_col}
+    optional = _OPTIONAL_FIELDS.get(tabla, [])
+    for opt in optional:
+        if opt not in insert_data and opt in body:
+            insert_data[opt] = body[opt]
+    if tabla == "prioridades" and "descripcion" not in insert_data:
+        cod = str(body.get("order_priority") or "").strip().upper()
+        insert_data["descripcion"] = _PRIORIDAD_DESCRIPCIONES.get(cod, "")
+    if not insert_data:
+        raise HTTPException(status_code=422, detail={"code": 422, "message": "Sin campos para insertar."})
+
+    columns = list(insert_data.keys())
+    values = list(insert_data.values())
+    placeholders = ", ".join(["?"] * len(columns))
+    col_list = ", ".join(columns)
+
+    with get_connection() as conn:
+        col_names = _get_column_names(conn, physical)
+        _validate_maestra_business(tabla, body, conn)
+        new_id = _next_id(conn, physical, pk_col)
+        sql = f"INSERT INTO {physical} ({pk_col}, {col_list}) VALUES (?, {placeholders}) RETURNING *"
+        try:
+            row = execute_query(conn, sql, [new_id] + values, fetch="one")
+        except duckdb.ConstraintException as exc:
+            raise HTTPException(status_code=409, detail={"code": 409, "message": str(exc)}) from exc
+        if row is None:
+            raise HTTPException(status_code=500, detail={"code": 500, "message": "No se pudo crear el registro."})
+        notify_db_changed(conn)
+        return _row_to_dict(row, col_names)
+
+
+@router.put("/{tabla}/{id}/")
+def update_record(tabla: str, id: int, body: dict[str, Any], _: dict = Depends(require_perm("mod.catalogo"))) -> dict:
+    _validate_tabla(tabla)
+    _assert_maestra_editable(tabla)
+    _validate_required_fields(tabla, body)
+    physical = _physical_table(tabla)
+    pk_col = _PK_COLUMN[tabla]
+    update_data = {k: v for k, v in body.items() if k != pk_col}
+    if not update_data:
+        raise HTTPException(status_code=422, detail={"code": 422, "message": "Sin campos para actualizar."})
+
+    def _values_equal(current: Any, new: Any) -> bool:
+        if current is None and new is None:
+            return True
+        if isinstance(current, (int, float)) or isinstance(new, (int, float)):
+            try:
+                return float(current) == float(new)
+            except (TypeError, ValueError):
+                pass
+        return str(current).strip() == str(new).strip()
+
+    select_sql = f"SELECT * FROM {physical} WHERE {pk_col} = ?"
+
+    with get_connection() as conn:
+        col_names = _get_column_names(conn, physical)
+        current_row = execute_query(conn, f"SELECT * FROM {physical} WHERE {pk_col} = ?", (id,), fetch="one")
+        if current_row is None:
+            raise HTTPException(status_code=404, detail={"code": 404, "message": f"Registro {id} no encontrado."})
+        current = _row_to_dict(current_row, col_names)
+        _validate_maestra_business(tabla, body, conn, id_actual=id)
+        changed_data = {
+            k: v for k, v in update_data.items()
+            if k in current and not _values_equal(current[k], v)
+        }
+        if not changed_data:
+            return current
+
+        merged = {**current, **changed_data}
+        non_pk_cols = [c for c in col_names if c != pk_col]
+        row_values = [merged[c] for c in non_pk_cols]
+
+        # DuckDB suele fallar con UPDATE en columnas con FK/UNIQUE; reemplazo DELETE+INSERT.
+        delete_sql = f"DELETE FROM {physical} WHERE {pk_col} = ?"
+        insert_cols = ", ".join([pk_col] + non_pk_cols)
+        insert_ph = ", ".join(["?"] * (1 + len(non_pk_cols)))
+        insert_sql = f"INSERT INTO {physical} ({insert_cols}) VALUES ({insert_ph})"
+
+        try:
+            execute_query(conn, delete_sql, (id,), fetch="none")
+            execute_query(conn, insert_sql, [id] + row_values, fetch="none")
+            row = execute_query(conn, select_sql, (id,), fetch="one")
+        except duckdb.ConstraintException:
+            set_clauses = ", ".join([f"{col} = ?" for col in changed_data.keys()])
+            values = list(changed_data.values()) + [id]
+            update_sql = f"UPDATE {physical} SET {set_clauses} WHERE {pk_col} = ?"
+            try:
+                execute_query(conn, update_sql, values, fetch="none")
+                row = execute_query(conn, select_sql, (id,), fetch="one")
+            except duckdb.ConstraintException as exc2:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": 409,
+                        "message": "No se puede modificar: el registro está en uso en ventas u otras tablas.",
+                        "detail": str(exc2),
+                    },
+                ) from exc2
+        notify_db_changed(conn)
+
+    if row is None:
+        raise HTTPException(status_code=404, detail={"code": 404, "message": f"Registro {id} no encontrado."})
+    return _row_to_dict(row, col_names)
+
+
+@router.delete("/{tabla}/{id}/", status_code=200)
+def delete_record(tabla: str, id: int, _: dict = Depends(require_perm("mod.catalogo"))) -> dict:
+    _validate_tabla(tabla)
+    _assert_maestra_editable(tabla)
+    physical = _physical_table(tabla)
+    pk_col = _PK_COLUMN[tabla]
+    check_sql = f"SELECT 1 FROM {physical} WHERE {pk_col} = ?"
+    delete_sql = f"DELETE FROM {physical} WHERE {pk_col} = ?"
+
+    with get_connection() as conn:
+        exists = execute_query(conn, check_sql, (id,), fetch="one")
+        if exists is None:
+            raise HTTPException(status_code=404, detail={"code": 404, "message": f"Registro {id} no encontrado."})
+        try:
+            execute_query(conn, delete_sql, (id,), fetch="none")
+        except duckdb.ConstraintException as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={"code": 409, "message": "No se puede eliminar: hay registros dependientes.", "detail": str(exc)},
+            ) from exc
+
+        notify_db_changed(conn)
+
+    return {"message": "Registro eliminado correctamente"}

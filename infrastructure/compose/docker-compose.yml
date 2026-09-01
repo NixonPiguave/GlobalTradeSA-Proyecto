@@ -1,0 +1,33 @@
+services:
+  globaltrade-unified:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.unified
+    container_name: globaltrade-unified
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    environment:
+      DUCKDB_PATH: /app/db/globtrade.duckdb
+      PARQUET_PATH: /app/data/ventas.parquet
+      JWT_SECRET: "dev-secret-change-me"
+      JWT_ALGORITHM: "HS256"
+      JWT_EXPIRE_MINUTES: "60"
+      CORS_ORIGINS: "http://localhost:8001,http://127.0.0.1:8001"
+      POCKETBASE_SYNC_ON_STARTUP: "false"
+    volumes:
+      - ../../db:/app/db
+      - ../../shared/storage:/app/shared/storage
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5); urllib.request.urlopen('http://127.0.0.1:8001/api/productos/categorias', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped

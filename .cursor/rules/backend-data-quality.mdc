@@ -1,0 +1,15 @@
+---
+description: Calidad para backend FastAPI, servicios y DuckDB
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Backend And Data Quality
+
+- Sigue los patrones existentes de `routers/`, `services/`, `database.py`, `config.py` y `main.py`.
+- Mantén la lógica de negocio en services cuando exista un service apropiado; evita engordar routers con consultas o reglas complejas.
+- DuckDB es embebido: no introduzcas múltiples procesos escritores sobre el mismo archivo `.duckdb`.
+- Los scripts de inicialización o seed deben ser idempotentes y no duplicar datos al ejecutarse varias veces.
+- En autenticación, nunca guardes contraseñas en texto plano y no reveles si falló email o contraseña.
+- Valida entradas antes de escribir datos y devuelve errores claros sin filtrar información sensible.
+- Si cambias endpoints, documenta o verifica request/response esperado desde la spec o quickstart.

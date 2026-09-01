@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ titulo }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10pt; color: #1C2430; margin: 0; padding: 0 28px 28px;
+    }
+    .top-band { height: 6px; background: #0B3A5C; margin: 0 -28px 0; }
+    .accent-band { height: 3px; background: #0D7A6F; margin: 0 -28px 18px; }
+    .header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      background: #E8F1F6; padding: 14px 16px; border-radius: 4px; margin-bottom: 18px;
+      border-left: 4px solid #0B3A5C;
+    }
+    .brand { font-size: 15pt; font-weight: 800; color: #0B3A5C; }
+    .brand small { display: block; font-size: 8pt; font-weight: 500; color: #5C6B7A; margin-top: 2px; }
+    .doc-meta { text-align: right; }
+    .doc-meta h1 { margin: 0; font-size: 12.5pt; color: #0B3A5C; font-weight: 700; }
+    .doc-meta p { margin: 3px 0 0; font-size: 9pt; color: #5C6B7A; }
+    .kpis { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .kpi {
+      flex: 1; min-width: 110px; background: #F5F7FA; border: 1px solid #D5DCE3;
+      border-top: 3px solid #0D7A6F; border-radius: 4px; padding: 10px 12px;
+    }
+    .kpi .label { font-size: 7pt; text-transform: uppercase; letter-spacing: .06em; color: #5C6B7A; font-weight: 700; }
+    .kpi .value { font-size: 12pt; font-weight: 800; color: #0B3A5C; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    th {
+      background: #0B3A5C; color: #fff; text-align: left;
+      padding: 7px 9px; font-size: 8pt; text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
+    }
+    td { padding: 6px 9px; border-bottom: 1px solid #D5DCE3; font-size: 9pt; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr:nth-child(even) td { background: #F5F7FA; }
+    .totals {
+      margin-top: 14px; padding: 12px 14px; background: #E6F4F2;
+      border-left: 4px solid #0D7A6F; font-size: 10pt; font-weight: 600; color: #0B3A5C;
+    }
+    .footer {
+      margin-top: 26px; padding-top: 10px; border-top: 3px solid #0D7A6F;
+      font-size: 7.5pt; color: #5C6B7A; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-band"></div>
+  <div class="accent-band"></div>
+  <div class="header">
+    <div class="brand">
+      {{ empresa_nombre }}
+      <small>{{ empresa_tagline }}</small>
+    </div>
+    <div class="doc-meta">
+      <h1>{{ titulo }}</h1>
+      {% if subtitulo and subtitulo != 'Sin filtros' %}<p>{{ subtitulo }}</p>{% endif %}
+      {% if fecha_generacion %}<p>Generado: {{ fecha_generacion }}</p>{% endif %}
+    </div>
+  </div>
+  {% if kpis %}
+  <div class="kpis">
+    {% for k in kpis %}
+    <div class="kpi"><div class="label">{{ k.label }}</div><div class="value">{{ k.value }}</div></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <table>
+    <thead><tr>{% for h in headers %}<th{% if loop.index > 1 %} style="text-align:right"{% endif %}>{{ h }}</th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>{% for cell in row %}<td{% if loop.index > 1 %} class="num"{% endif %}>{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if totales %}<div class="totals">{{ totales }}</div>{% endif %}
+  <div class="footer">Documento generado electrónicamente — {{ empresa_nombre }} · Uso interno y analítico</div>
+</body>
+</html>

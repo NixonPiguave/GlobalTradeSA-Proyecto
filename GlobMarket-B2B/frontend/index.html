@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GlobMarket B2B — Portal Mayorista Internacional</title>
+    <meta name="description" content="Portal mayorista internacional de GLOBTRADE S.A. Compra por volumen, con catálogo global y logística confiable." />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Arial'],
+            },
+            colors: {
+              brand: { 600: '#1A56DB' },
+            },
+          },
+        },
+      };
+    </script>
+
+    <link rel="stylesheet" href="/css/app.css?v=3" />
+  </head>
+  <body class="font-sans bg-white text-slate-800">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+
+    <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+          <a href="/" class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-sm">
+              <span class="text-white font-extrabold">G</span>
+            </div>
+            <div class="leading-tight">
+              <div class="text-sm font-extrabold text-slate-900 tracking-tight">GlobMarket <span class="text-blue-700">B2B</span></div>
+              <div class="text-xs text-slate-500">Powered by GLOBTRADE S.A.</div>
+            </div>
+          </a>
+
+          <nav class="flex items-center gap-2">
+            <a href="/pages/catalogo.html" class="hidden sm:inline-flex px-4 py-2 rounded-xl border border-slate-200 bg-white hover:border-blue-200 transition text-sm font-semibold">
+              Ver catálogo
+            </a>
+            <a data-nav-login href="/pages/login.html" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition">
+              Iniciar sesión
+            </a>
+            <a data-nav-registro href="/pages/registro.html" class="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
+              Registrarse
+            </a>
+            <button data-nav-logout class="hidden px-4 py-2 rounded-xl border border-slate-200 bg-white hover:border-blue-200 transition text-sm font-semibold">
+              Cerrar sesión
+            </button>
+          </nav>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="bg-slate-50">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
+          <div class="grid lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <div class="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1 rounded-full">
+                <span class="h-2 w-2 rounded-full bg-blue-600"></span>
+                Portal mayorista internacional
+              </div>
+              <h1 class="mt-4 text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight">
+                Compra por volumen con alcance global y datos confiables.
+              </h1>
+              <p class="mt-4 text-lg text-slate-600 leading-7">
+                GlobMarket B2B conecta a empresas compradoras con el catálogo de GLOBTRADE S.A. en 185 países.
+                Pedidos, precios mayoristas y logística listos para escalar.
+              </p>
+              <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                <a href="/pages/catalogo.html" class="gm-press inline-flex items-center justify-center px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-sm">
+                  Explorar catálogo
+                </a>
+                <a href="/pages/registro.html" class="inline-flex items-center justify-center px-6 py-3 rounded-xl border border-slate-200 bg-white hover:border-blue-200 transition font-semibold">
+                  Crear cuenta empresarial
+                </a>
+              </div>
+
+              <div class="mt-8 grid grid-cols-3 gap-4">
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div class="text-2xl font-extrabold text-slate-900">185</div>
+                  <div class="text-xs text-slate-500 mt-1">Países</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div class="text-2xl font-extrabold text-slate-900">12</div>
+                  <div class="text-xs text-slate-500 mt-1">Categorías</div>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                  <div class="text-2xl font-extrabold text-slate-900">7</div>
+                  <div class="text-xs text-slate-500 mt-1">Regiones</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative">
+              <div class="absolute -inset-6 bg-blue-600/10 blur-3xl rounded-full"></div>
+              <div class="relative rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1760463921697-6ab2c0caca20?auto=format&fit=crop&w=1600&q=80"
+                  alt="Góndolas con productos de consumo masivo"
+                  loading="lazy"
+                  class="h-72 sm:h-96 lg:h-[420px] w-full object-cover"
+                />
+                <div class="p-5 border-t border-slate-200 bg-white">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="text-sm font-semibold text-slate-900">Catálogo mayorista FMCG</div>
+                      <div class="text-xs text-slate-500 mt-1">Productos de consumo masivo para retail y distribución</div>
+                    </div>
+                    <a href="/pages/catalogo.html" class="text-sm font-semibold text-blue-700 hover:text-blue-800 transition">Ver productos</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
+        <div class="flex items-end justify-between gap-6">
+          <div>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Categorías</h2>
+            <p class="mt-2 text-slate-600">Explora el catálogo por categoría y encuentra productos listos para compra mayorista.</p>
+          </div>
+          <a href="/pages/catalogo.html" class="hidden sm:inline-flex px-4 py-2 rounded-xl border border-slate-200 bg-white hover:border-blue-200 transition text-sm font-semibold">
+            Ver todo
+          </a>
+        </div>
+
+        <div id="categorias-grid" class="mt-8 grid sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+      </section>
+
+      <section class="bg-slate-50 border-t border-slate-200">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="gm-card rounded-2xl border border-slate-200 bg-white p-6 hover:border-blue-200 hover:shadow-md transition">
+              <div class="text-sm font-semibold text-slate-900">Compras empresariales</div>
+              <div class="mt-2 text-sm text-slate-600">Cuenta, historial y precios mayoristas para empresas compradoras.</div>
+            </div>
+            <div class="gm-card rounded-2xl border border-slate-200 bg-white p-6 hover:border-blue-200 hover:shadow-md transition">
+              <div class="text-sm font-semibold text-slate-900">Escala global</div>
+              <div class="mt-2 text-sm text-slate-600">Operación en 7 regiones y 185 países con catálogo consistente.</div>
+            </div>
+            <div class="gm-card rounded-2xl border border-slate-200 bg-white p-6 hover:border-blue-200 hover:shadow-md transition sm:col-span-2 lg:col-span-1">
+              <div class="text-sm font-semibold text-slate-900">Datos confiables</div>
+              <div class="mt-2 text-sm text-slate-600">Integración directa con el sistema de ventas analítico (DuckDB).</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-slate-200 bg-white">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div>
+            <div class="text-sm font-extrabold text-slate-900">GLOBTRADE S.A.</div>
+            <div class="text-xs text-slate-500 mt-1">Distribución y comercio internacional — 185 países.</div>
+          </div>
+          <div class="text-xs text-slate-500">
+            © <span id="year"></span> GlobMarket B2B. Todos los derechos reservados.
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/js/app.js?v=3"></script>
+    <script>
+      document.getElementById('year').textContent = String(new Date().getFullYear());
+      if (window.lucide) window.lucide.createIcons();
+    </script>
+  </body>
+</html>
+

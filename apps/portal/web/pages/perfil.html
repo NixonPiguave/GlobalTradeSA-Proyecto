@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mi perfil — GlobMarket</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: { fontFamily: { sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui'], display: ['Manrope', 'IBM Plex Sans', 'sans-serif'] } } } };
+    </script>
+    <link rel="stylesheet" href="/css/app.css?v=84" />
+  </head>
+  <body class="font-sans bg-slate-50 text-slate-800">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+    <header class="gm-header sticky top-0 z-40"></header>
+
+    <main class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-extrabold text-slate-900 font-display">Mi perfil</h1>
+          <p class="mt-1 text-sm text-slate-600">Datos de cliente, direcciones, contactos, avisos, seguridad y preferencias.</p>
+        </div>
+        <div class="flex gap-2">
+          <a href="/pages/mis-pedidos.html" class="px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">Mis pedidos</a>
+          <a href="/pages/favoritos.html" class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-semibold hover:border-blue-200">Favoritos</a>
+        </div>
+      </div>
+
+      <div class="mt-6 flex flex-wrap gap-2" id="cuenta-tabs" role="tablist">
+        <button type="button" data-tab="empresa" class="cuenta-tab active px-4 py-2 rounded-full text-sm font-semibold bg-slate-900 text-white">Datos</button>
+        <button type="button" data-tab="direcciones" class="cuenta-tab px-4 py-2 rounded-full text-sm font-semibold bg-white border border-slate-200 text-slate-700">Direcciones</button>
+        <button type="button" data-tab="contactos" class="cuenta-tab px-4 py-2 rounded-full text-sm font-semibold bg-white border border-slate-200 text-slate-700">Contactos</button>
+        <button type="button" data-tab="avisos" class="cuenta-tab px-4 py-2 rounded-full text-sm font-semibold bg-white border border-slate-200 text-slate-700">Avisos</button>
+        <button type="button" data-tab="seguridad" class="cuenta-tab px-4 py-2 rounded-full text-sm font-semibold bg-white border border-slate-200 text-slate-700">Seguridad</button>
+        <button type="button" data-tab="prefs" class="cuenta-tab px-4 py-2 rounded-full text-sm font-semibold bg-white border border-slate-200 text-slate-700">Preferencias</button>
+      </div>
+
+      <div id="perfil-wrap" class="mt-6">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 animate-pulse h-56"></div>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/js/app.js?v=88"></script>
+    <script src="/js/carrito.js?v=83"></script>
+    <script>
+      (function () {
+        if (!getToken()) { window.location.href = '/pages/login.html'; return; }
+
+        let state = null;
+        let tab = 'empresa';
+          const wrap = document.getElementById('perfil-wrap');
+
+        function setTab(id) {
+          tab = id;
+          document.querySelectorAll('.cuenta-tab').forEach((b) => {
+            const on = b.dataset.tab === id;
+            b.classList.toggle('active', on);
+            b.classList.toggle('bg-slate-900', on);
+            b.classList.toggle('text-white', on);
+            b.classList.toggle('bg-white', !on);
+            b.classList.toggle('border', !on);
+            b.classList.toggle('border-slate-200', !on);
+            b.classList.toggle('text-slate-700', !on);
+          });
+          render();
+        }
+
+        document.getElementById('cuenta-tabs').addEventListener('click', (e) => {
+          const b = e.target.closest('[data-tab]');
+          if (b) setTab(b.dataset.tab);
+        });
+
+        async function load() {
+          state = await apiFetch('/api/cuenta/resumen', { auth: true });
+          render();
+        }
+
+        function badgeTipo(t) {
+          const map = { envio: 'Envío', facturacion: 'Facturación', ambos: 'Envío y facturación' };
+          return map[t] || t || 'Envío';
+        }
+
+        function renderEmpresa() {
+          const u = state.usuario || {};
+          const c = state.cliente || {};
+          return `
+            <div class="grid lg:grid-cols-5 gap-5">
+              <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-6">
+                <div class="flex items-center gap-4">
+                  <div class="h-14 w-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white text-xl font-extrabold">${escapeHtml((c.nombre_empresa || 'E')[0].toUpperCase())}</div>
+                  <div>
+                    <div class="text-lg font-extrabold text-slate-900">${escapeHtml(c.nombre_empresa || 'Empresa')}</div>
+                    <div class="text-sm text-slate-500">Cuenta ${u.activo ? '· <span class="text-emerald-600 font-semibold">Activa</span>' : '· Inactiva'}</div>
+                  </div>
+                </div>
+                <dl class="mt-6 space-y-3 text-sm">
+                  <div><dt class="text-slate-500">Email de acceso</dt><dd class="font-semibold">${escapeHtml(u.email || '—')}</dd></div>
+                  <div><dt class="text-slate-500">Registrado</dt><dd class="font-semibold">${escapeHtml(String(u.fecha_registro || '—').slice(0, 10))}</dd></div>
+                  <div><dt class="text-slate-500">Lista de precios</dt><dd class="font-semibold">${escapeHtml((state.lista_precio && state.lista_precio.nombre) ? state.lista_precio.nombre : 'Público')}${(state.lista_precio && state.lista_precio.grupo) ? ` <span class="text-slate-500 font-normal">(${escapeHtml(state.lista_precio.grupo)})</span>` : ''}</dd></div>
+                  <div><dt class="text-slate-500">Dirección principal</dt><dd class="font-semibold">${escapeHtml(c.direccion || 'Sin dirección')}</dd></div>
+                </dl>
+                <p class="mt-5 text-xs text-slate-600 rounded-xl bg-blue-50 border border-blue-100 px-3 py-2">Tu lista define el precio mayorista y la cantidad mínima por producto en el catálogo. Los clientes en lista <strong>Mayorista</strong> suelen tener MOQ más alto y mejores tarifas.</p>
+              </div>
+              <div class="lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-6">
+                <h2 class="text-base font-extrabold text-slate-900">Datos de contacto</h2>
+                <div id="perfil-msg" class="mt-3"></div>
+                <form id="perfil-form" class="mt-4 grid sm:grid-cols-2 gap-4" novalidate>
+                  <div class="sm:col-span-2">
+                    <label class="block text-sm font-semibold text-slate-700" for="p-pais">País *</label>
+                    <select id="p-pais" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" required><option value="">Selecciona...</option></select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700" for="p-telefono">Teléfono</label>
+                    <input id="p-telefono" type="tel" maxlength="20" inputmode="tel" placeholder="+51 999 123 456"
+                      value="${escapeHtml(c.telefono || '')}" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700" for="p-direccion">Dirección de referencia</label>
+                    <input id="p-direccion" type="text" maxlength="200" value="${escapeHtml(c.direccion || '')}" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" />
+                  </div>
+                  <div class="sm:col-span-2">
+                    <button id="perfil-save" type="submit" class="rounded-xl bg-blue-600 text-white px-5 py-2.5 font-semibold hover:bg-blue-700">Guardar ficha</button>
+                  </div>
+                </form>
+              </div>
+            </div>`;
+        }
+
+        function renderDirecciones() {
+          const items = state.direcciones || [];
+          return `
+            <div class="rounded-2xl border border-slate-200 bg-white p-6">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-base font-extrabold text-slate-900">Libreta de direcciones</h2>
+                  <p class="text-sm text-slate-600">El <strong>país</strong> de entrega define la macro-zona logística (Américas / EMEA / APAC) y los transportistas permitidos al despachar.</p>
+                </div>
+              </div>
+              <div id="dir-logistica" class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">Calculando cobertura logística…</div>
+              <div id="dir-msg" class="mt-3"></div>
+              <div class="mt-4 grid md:grid-cols-2 gap-4" id="dir-list">
+                ${items.length ? items.map((d) => `
+                  <div class="rounded-xl border border-slate-200 p-4 ${d.es_principal ? 'ring-2 ring-blue-200' : ''}">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <div class="font-bold text-slate-900">${escapeHtml(d.alias)}${d.es_principal ? ' <span class="text-xs text-blue-700 font-semibold">Principal</span>' : ''}</div>
+                        <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(badgeTipo(d.tipo))}</div>
+                      </div>
+                      <button type="button" data-del-dir="${d.id_direccion}" class="text-xs font-semibold text-rose-600 hover:underline">Eliminar</button>
+                    </div>
+                    <p class="mt-2 text-sm text-slate-700">${escapeHtml(d.direccion)}${d.ciudad ? ', ' + escapeHtml(d.ciudad) : ''}</p>
+                    <p class="text-sm text-slate-500">${escapeHtml(d.pais || '')}</p>
+                    ${!d.es_principal ? `<button type="button" data-main-dir="${d.id_direccion}" class="mt-3 text-xs font-semibold text-blue-700 hover:underline">Marcar como principal</button>` : ''}
+                  </div>`).join('') : '<p class="text-sm text-slate-500 md:col-span-2">Aún no tienes direcciones guardadas.</p>'}
+              </div>
+              <form id="dir-form" class="mt-6 grid sm:grid-cols-2 gap-3 border-t border-slate-100 pt-5">
+                <h3 class="sm:col-span-2 text-sm font-extrabold text-slate-900">Agregar dirección</h3>
+                <div><label class="text-xs font-semibold text-slate-600">Alias</label><input id="d-alias" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Almacén Lima" maxlength="80" /></div>
+                <div><label class="text-xs font-semibold text-slate-600">Tipo</label>
+                  <select id="d-tipo" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    <option value="envio">Envío</option><option value="facturacion">Facturación</option><option value="ambos">Ambos</option>
+                  </select>
+                </div>
+                <div class="sm:col-span-2"><label class="text-xs font-semibold text-slate-600">Dirección *</label><input id="d-dir" required minlength="5" maxlength="300" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></div>
+                <div><label class="text-xs font-semibold text-slate-600">Ciudad</label><input id="d-ciudad" maxlength="100" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></div>
+                <div><label class="text-xs font-semibold text-slate-600">País *</label><select id="d-pais" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required><option value="">Selecciona...</option></select></div>
+                <label class="sm:col-span-2 flex items-center gap-2 text-sm"><input id="d-principal" type="checkbox" class="rounded" /> Marcar como principal</label>
+                <div class="sm:col-span-2"><button type="submit" class="rounded-xl bg-blue-600 text-white px-4 py-2.5 text-sm font-semibold">Guardar dirección</button></div>
+              </form>
+            </div>`;
+        }
+
+        function renderContactos() {
+          const items = state.contactos || [];
+          return `
+            <div class="rounded-2xl border border-slate-200 bg-white p-6">
+              <div>
+                <h2 class="text-base font-extrabold text-slate-900">Contactos de la empresa</h2>
+                <p class="text-sm text-slate-600">Personas de referencia para compras, logística o facturación. El equipo comercial de GlobalTrade puede contactarlas al gestionar pedidos.</p>
+              </div>
+              <div id="ct-msg" class="mt-3"></div>
+              <div class="mt-4 grid md:grid-cols-2 gap-4" id="ct-list">
+                ${items.length ? items.map((c) => `
+                  <div class="rounded-xl border border-slate-200 p-4" data-ct-card="${c.id_contacto}">
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <div class="font-bold text-slate-900">${escapeHtml(c.nombre)}</div>
+                        ${c.cargo ? `<div class="text-xs text-slate-500 mt-0.5">${escapeHtml(c.cargo)}</div>` : ''}
+                      </div>
+                      <button type="button" data-del-ct="${c.id_contacto}" class="text-xs font-semibold text-rose-600 hover:underline">Eliminar</button>
+                    </div>
+                    <dl class="mt-3 space-y-1 text-sm text-slate-700">
+                      ${c.email ? `<div><span class="text-slate-500">Email:</span> ${escapeHtml(c.email)}</div>` : ''}
+                      ${c.telefono ? `<div><span class="text-slate-500">Tel:</span> ${escapeHtml(c.telefono)}</div>` : ''}
+                    </dl>
+                    <button type="button" data-edit-ct="${c.id_contacto}" class="mt-3 text-xs font-semibold text-blue-700 hover:underline">Editar</button>
+                  </div>`).join('') : '<p class="text-sm text-slate-500 md:col-span-2">Aún no tienes contactos registrados.</p>'}
+              </div>
+              <form id="ct-form" class="mt-6 grid sm:grid-cols-2 gap-3 border-t border-slate-100 pt-5">
+                <h3 class="sm:col-span-2 text-sm font-extrabold text-slate-900" id="ct-form-title">Agregar contacto</h3>
+                <input type="hidden" id="ct-id" value="" />
+                <div class="sm:col-span-2"><label class="text-xs font-semibold text-slate-600">Nombre *</label><input id="ct-nombre" required minlength="2" maxlength="120" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></div>
+                <div><label class="text-xs font-semibold text-slate-600">Cargo</label><input id="ct-cargo" maxlength="80" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Compras, Logística…" /></div>
+                <div><label class="text-xs font-semibold text-slate-600">Email</label><input id="ct-email" type="email" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></div>
+                <div class="sm:col-span-2"><label class="text-xs font-semibold text-slate-600">Teléfono</label><input id="ct-tel" type="tel" maxlength="20" inputmode="tel" placeholder="+51 999 123 456" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" /></div>
+                <div class="sm:col-span-2 flex flex-wrap gap-2">
+                  <button type="submit" class="rounded-xl bg-blue-600 text-white px-4 py-2.5 text-sm font-semibold">Guardar contacto</button>
+                  <button type="button" id="ct-cancel" class="hidden rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancelar edición</button>
+                </div>
+              </form>
+            </div>`;
+        }
+
+        function renderAvisos() {
+          return `
+            <div class="rounded-2xl border border-slate-200 bg-white p-6">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-base font-extrabold text-slate-900">Centro de avisos</h2>
+                  <p class="text-sm text-slate-600">Promociones, pedidos y alertas de stock. Pulsa un aviso para ir al producto, paquete o sección relacionada.</p>
+                </div>
+                <button type="button" id="avisos-leer" class="text-xs font-semibold text-blue-700 hover:underline">Marcar todas leídas</button>
+              </div>
+              <div id="avisos-list" class="mt-4 space-y-2 text-sm text-slate-600">Cargando avisos…</div>
+            </div>`;
+        }
+
+        function renderSeguridad() {
+          return `
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 max-w-xl">
+              <h2 class="text-base font-extrabold text-slate-900">Seguridad de la cuenta</h2>
+              <p class="text-sm text-slate-600">Cambia tu contraseña de acceso al portal.</p>
+              <div id="pw-msg" class="mt-3"></div>
+              <form id="pw-form" class="mt-4 space-y-3">
+                <div><label class="text-sm font-semibold">Contraseña actual</label><input id="pw-old" type="password" required minlength="8" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></div>
+                <div><label class="text-sm font-semibold">Nueva contraseña</label><input id="pw-new" type="password" required minlength="8" maxlength="72" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></div>
+                <div><label class="text-sm font-semibold">Confirmar nueva</label><input id="pw-new2" type="password" required minlength="8" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm" /></div>
+                <button type="submit" class="rounded-xl bg-blue-600 text-white px-5 py-2.5 font-semibold">Actualizar contraseña</button>
+              </form>
+            </div>`;
+        }
+
+        function renderPrefs() {
+          const p = state.preferencias || {};
+          return `
+            <div class="rounded-2xl border border-slate-200 bg-white p-6 max-w-xl">
+              <h2 class="text-base font-extrabold text-slate-900">Preferencias</h2>
+              <p class="text-sm text-slate-600">Afectan la moneda de visualización y qué avisos ves aquí. La facturación sigue en USD.</p>
+              <div id="pf-msg" class="mt-3"></div>
+              <form id="pf-form" class="mt-4 space-y-4">
+                <label class="flex items-center gap-3 text-sm"><input id="pf-ped" type="checkbox" ${p.notif_pedidos ? 'checked' : ''} /> Avisos de estado de pedidos (pagado, enviado, entregado…)</label>
+                <label class="flex items-center gap-3 text-sm"><input id="pf-promo" type="checkbox" ${p.notif_promociones ? 'checked' : ''} /> Promociones y catálogos nuevos</label>
+                <label class="flex items-center gap-3 text-sm"><input id="pf-stock" type="checkbox" ${p.notif_stock ? 'checked' : ''} /> Alertas de poco stock en favoritos</label>
+                <div>
+                  <label class="text-sm font-semibold">Moneda preferida (visual)</label>
+                  <select id="pf-moneda" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                    ${['USD','EUR','PEN','MXN'].map((m) => `<option value="${m}" ${p.moneda_preferida === m ? 'selected' : ''}>${m}</option>`).join('')}
+                  </select>
+                  <p class="mt-1 text-xs text-slate-400">Tipo de cambio referencial para visualización (no afecta facturación).</p>
+                </div>
+                <button type="submit" class="rounded-xl bg-blue-600 text-white px-5 py-2.5 font-semibold">Guardar preferencias</button>
+              </form>
+              </div>`;
+        }
+
+        function render() {
+          if (!state) return;
+          if (tab === 'empresa') wrap.innerHTML = renderEmpresa();
+          else if (tab === 'direcciones') wrap.innerHTML = renderDirecciones();
+          else if (tab === 'contactos') wrap.innerHTML = renderContactos();
+          else if (tab === 'avisos') wrap.innerHTML = renderAvisos();
+          else if (tab === 'seguridad') wrap.innerHTML = renderSeguridad();
+          else wrap.innerHTML = renderPrefs();
+          bind();
+        }
+
+        function bind() {
+          if (tab === 'empresa') {
+            listarPaisesSelect('#p-pais', state.cliente?.pais || '');
+            document.getElementById('perfil-form')?.addEventListener('submit', async (ev) => {
+              ev.preventDefault();
+              const pais = document.getElementById('p-pais').value.trim();
+              if (!pais) { setInlineMessage('perfil-msg', 'error', 'El país es obligatorio.'); return; }
+              const telCheck = validarTelefono(document.getElementById('p-telefono').value);
+              if (!telCheck.ok) { setInlineMessage('perfil-msg', 'error', telCheck.msg); return; }
+              try {
+                await apiFetch('/api/cuenta/perfil', {
+                  method: 'PUT', auth: true,
+                  body: {
+                    pais,
+                    telefono: telCheck.value,
+                    direccion: document.getElementById('p-direccion').value.trim() || null,
+                  },
+                });
+                showToast('success', 'Ficha actualizada');
+                await load();
+              } catch (e) { setInlineMessage('perfil-msg', 'error', e.message); }
+            });
+          }
+          if (tab === 'direcciones') {
+            listarPaisesSelect('#d-pais', state.cliente?.pais || '');
+            (async () => {
+              const box = document.getElementById('dir-logistica');
+              if (!box) return;
+              try {
+                const info = await apiFetch('/api/cuenta/envio-estimado', { auth: true });
+                const carriers = (info.transportistas || []).map((t) => t.nombre).join(', ') || '—';
+                const zona = (info.zonas && info.zonas[0]) ? `${info.zonas[0].nombre} · base ${formatUsd(info.zonas[0].costo_base)}` : '—';
+                box.innerHTML = info.macro_zona
+                  ? `<strong>${escapeHtml(info.pais || '')}</strong> → ${escapeHtml(info.macro_label || info.macro_zona)}
+                     · Región analytics: ${escapeHtml(info.region || '—')}<br>
+                     Transportistas: ${escapeHtml(carriers)}<br>
+                     Tarifa de referencia: ${escapeHtml(zona)}`
+                  : escapeHtml(info.mensaje || 'Defina un país de entrega para calcular la cobertura.');
+              } catch (e) {
+                box.textContent = e.message || 'No se pudo calcular la cobertura logística.';
+              }
+            })();
+            document.getElementById('dir-form')?.addEventListener('submit', async (ev) => {
+              ev.preventDefault();
+              try {
+                await apiFetch('/api/cuenta/direcciones', {
+                  method: 'POST', auth: true,
+                  body: {
+                    alias: document.getElementById('d-alias').value.trim() || 'Dirección',
+                    tipo: document.getElementById('d-tipo').value,
+                    direccion: document.getElementById('d-dir').value.trim(),
+                    ciudad: document.getElementById('d-ciudad').value.trim() || null,
+                    pais: document.getElementById('d-pais').value.trim(),
+                    es_principal: document.getElementById('d-principal').checked,
+                  },
+                });
+                showToast('success', 'Dirección guardada');
+                await load();
+              } catch (e) { setInlineMessage('dir-msg', 'error', e.message); }
+            });
+            wrap.querySelectorAll('[data-del-dir]').forEach((b) => b.addEventListener('click', async () => {
+              if (!confirm('¿Eliminar esta dirección?')) return;
+              try {
+                await apiFetch(`/api/cuenta/direcciones/${b.dataset.delDir}`, { method: 'DELETE', auth: true });
+                await load();
+              } catch (e) { showToast('error', e.message); }
+            }));
+            wrap.querySelectorAll('[data-main-dir]').forEach((b) => b.addEventListener('click', async () => {
+              try {
+                await apiFetch(`/api/cuenta/direcciones/${b.dataset.mainDir}`, { method: 'PUT', auth: true, body: { es_principal: true } });
+                await load();
+              } catch (e) { showToast('error', e.message); }
+            }));
+          }
+          if (tab === 'contactos') {
+            const resetCtForm = () => {
+              document.getElementById('ct-id').value = '';
+              document.getElementById('ct-nombre').value = '';
+              document.getElementById('ct-cargo').value = '';
+              document.getElementById('ct-email').value = '';
+              document.getElementById('ct-tel').value = '';
+              document.getElementById('ct-form-title').textContent = 'Agregar contacto';
+              document.getElementById('ct-cancel')?.classList.add('hidden');
+            };
+            document.getElementById('ct-cancel')?.addEventListener('click', resetCtForm);
+            wrap.querySelectorAll('[data-edit-ct]').forEach((b) => b.addEventListener('click', () => {
+              const c = (state.contactos || []).find((x) => String(x.id_contacto) === b.dataset.editCt);
+              if (!c) return;
+              document.getElementById('ct-id').value = String(c.id_contacto);
+              document.getElementById('ct-nombre').value = c.nombre || '';
+              document.getElementById('ct-cargo').value = c.cargo || '';
+              document.getElementById('ct-email').value = c.email || '';
+              document.getElementById('ct-tel').value = c.telefono || '';
+              document.getElementById('ct-form-title').textContent = 'Editar contacto';
+              document.getElementById('ct-cancel')?.classList.remove('hidden');
+              document.getElementById('ct-nombre').focus();
+            }));
+            wrap.querySelectorAll('[data-del-ct]').forEach((b) => b.addEventListener('click', async () => {
+              if (!confirm('¿Eliminar este contacto?')) return;
+              try {
+                await apiFetch(`/api/cuenta/contactos/${b.dataset.delCt}`, { method: 'DELETE', auth: true });
+                showToast('success', 'Contacto eliminado');
+                await load();
+              } catch (e) { showToast('error', e.message); }
+            }));
+            document.getElementById('ct-form')?.addEventListener('submit', async (ev) => {
+              ev.preventDefault();
+              const nombre = document.getElementById('ct-nombre').value.trim();
+              if (!nombre) { setInlineMessage('ct-msg', 'error', 'El nombre es obligatorio.'); return; }
+              const telCheck = validarTelefono(document.getElementById('ct-tel').value);
+              if (!telCheck.ok) { setInlineMessage('ct-msg', 'error', telCheck.msg); return; }
+              const body = {
+                nombre,
+                cargo: document.getElementById('ct-cargo').value.trim() || null,
+                email: document.getElementById('ct-email').value.trim() || null,
+                telefono: telCheck.value,
+              };
+              const id = document.getElementById('ct-id').value;
+              try {
+                if (id) {
+                  await apiFetch(`/api/cuenta/contactos/${id}`, { method: 'PUT', auth: true, body });
+                  showToast('success', 'Contacto actualizado');
+                } else {
+                  await apiFetch('/api/cuenta/contactos', { method: 'POST', auth: true, body });
+                  showToast('success', 'Contacto agregado');
+                }
+                await load();
+              } catch (e) { setInlineMessage('ct-msg', 'error', e.message); }
+            });
+          }
+          if (tab === 'avisos') {
+            (async () => {
+              const box = document.getElementById('avisos-list');
+              if (!box) return;
+              try {
+                const data = await apiFetch('/api/cuenta/notificaciones', { auth: true });
+                const items = data.items || [];
+                box.innerHTML = items.length
+                  ? items.map((n) => `
+                    <div class="rounded-xl border border-slate-200 px-4 py-3 cursor-pointer hover:border-blue-300 ${n.leida ? '' : 'bg-blue-50 ring-1 ring-blue-100'}"
+                         data-id="${n.id_notif}" data-link="${escapeHtml(n.link || '')}" role="button" tabindex="0">
+                      <div class="font-semibold text-slate-900">${escapeHtml(n.titulo || '')}</div>
+                      <div class="text-xs text-slate-600 mt-1">${escapeHtml(n.cuerpo || '')}</div>
+                      <div class="text-xs text-slate-400 mt-1">${escapeHtml(String(n.fecha || '').slice(0, 16).replace('T', ' '))}${n.link ? ' · Ver detalle →' : ''}</div>
+                    </div>`).join('')
+                  : '<p class="text-slate-500">Sin avisos por ahora. Activa promociones en Preferencias si quieres recibir descuentos.</p>';
+                box.querySelectorAll('[data-id]').forEach((el) => {
+                  const go = () => {
+                    const link = el.dataset.link || '';
+                    void followNotifLink(link, el.dataset.id, async () => {
+                      if (!link) setTab('avisos');
+                    });
+                  };
+                  el.addEventListener('click', go);
+                  el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
+                });
+              } catch (e) { box.textContent = e.message || 'No se pudieron cargar los avisos.'; }
+        })();
+            document.getElementById('avisos-leer')?.addEventListener('click', async () => {
+              try {
+                await apiFetch('/api/cuenta/notificaciones/leer-todas', { method: 'POST', auth: true });
+                showToast('success', 'Avisos marcados como leídos');
+                setTab('avisos');
+              } catch (e) { showToast('error', e.message); }
+            });
+          }
+          if (tab === 'seguridad') {
+            document.getElementById('pw-form')?.addEventListener('submit', async (ev) => {
+              ev.preventDefault();
+              const n1 = document.getElementById('pw-new').value;
+              const n2 = document.getElementById('pw-new2').value;
+              if (n1 !== n2) { setInlineMessage('pw-msg', 'error', 'Las contraseñas no coinciden.'); return; }
+              try {
+                await apiFetch('/api/cuenta/password', {
+                  method: 'POST', auth: true,
+                  body: { password_actual: document.getElementById('pw-old').value, password_nueva: n1 },
+                });
+                setInlineMessage('pw-msg', 'success', 'Contraseña actualizada.');
+                showToast('success', 'Contraseña actualizada');
+                ev.target.reset();
+              } catch (e) { setInlineMessage('pw-msg', 'error', e.message); }
+            });
+          }
+          if (tab === 'prefs') {
+            document.getElementById('pf-form')?.addEventListener('submit', async (ev) => {
+              ev.preventDefault();
+              try {
+                const prefs = await apiFetch('/api/cuenta/preferencias', {
+                  method: 'PUT', auth: true,
+                  body: {
+                    notif_pedidos: document.getElementById('pf-ped').checked,
+                    notif_promociones: document.getElementById('pf-promo').checked,
+                    notif_stock: document.getElementById('pf-stock').checked,
+                    moneda_preferida: document.getElementById('pf-moneda').value,
+                  },
+                });
+                if (typeof gmPrefs !== 'undefined') Object.assign(gmPrefs, prefs);
+                try { window.gmPrefs = gmPrefs; } catch (_) {}
+                if (typeof applyPreferenciasUI === 'function') applyPreferenciasUI();
+                if (typeof ensurePortalChrome === 'function') {
+                  const brand = typeof loadBranding === 'function' ? await loadBranding() : null;
+                  ensurePortalChrome(brand);
+                  applyPreferenciasUI();
+                }
+                showToast('success', 'Preferencias guardadas');
+                await load();
+              } catch (e) { setInlineMessage('pf-msg', 'error', e.message); }
+            });
+          }
+        }
+
+        load().catch((e) => {
+          wrap.innerHTML = `<div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">${escapeHtml(e.message)}</div>`;
+        });
+      })();
+    </script>
+  </body>
+</html>

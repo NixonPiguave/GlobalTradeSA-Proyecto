@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ titulo }} — {{ numero }}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 10.5pt; color: #1C2430; margin: 0; padding: 0 28px 28px;
+    }
+    .top-band { height: 6px; background: #0B3A5C; margin: 0 -28px 0; }
+    .accent-band { height: 3px; background: #0D7A6F; margin: 0 -28px 18px; }
+    .header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      background: #E8F1F6; padding: 14px 16px; border-radius: 4px; margin-bottom: 20px;
+      border-left: 4px solid #0B3A5C;
+    }
+    .brand { font-size: 17pt; font-weight: 800; color: #0B3A5C; letter-spacing: -0.02em; }
+    .brand small { display: block; font-size: 8.5pt; font-weight: 500; color: #5C6B7A; margin-top: 2px; }
+    .doc-meta { text-align: right; }
+    .doc-meta h1 { margin: 0; font-size: 13pt; color: #0B3A5C; font-weight: 700; }
+    .doc-meta p { margin: 3px 0 0; font-size: 9.5pt; color: #5C6B7A; }
+    .section { margin-bottom: 14px; }
+    .section h2 {
+      font-size: 8.5pt; text-transform: uppercase; letter-spacing: .08em;
+      color: #0B3A5C; margin: 0 0 8px; font-weight: 700;
+      border-bottom: 1px solid #D5DCE3; padding-bottom: 4px;
+    }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 28px; font-size: 9.5pt; }
+    table.lines { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    table.lines th {
+      background: #0B3A5C; color: #fff; text-align: left;
+      padding: 8px 10px; font-size: 8pt; text-transform: uppercase; letter-spacing: .04em;
+      font-weight: 700;
+    }
+    table.lines th.num, table.lines td.num { text-align: right; }
+    table.lines td {
+      padding: 7px 10px; border-bottom: 1px solid #D5DCE3; font-size: 9.5pt;
+    }
+    table.lines tr:nth-child(even) td { background: #F5F7FA; }
+    .totals { margin-top: 14px; max-width: 300px; margin-left: auto; }
+    .totals .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 9.5pt; color: #1C2430; }
+    .totals .row.grand {
+      font-size: 12pt; font-weight: 800; border-top: 2px solid #0B3A5C;
+      padding-top: 8px; margin-top: 6px; color: #0B3A5C;
+    }
+    .footer {
+      margin-top: 28px; padding-top: 10px;
+      border-top: 3px solid #0D7A6F; font-size: 7.5pt; color: #5C6B7A; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-band"></div>
+  <div class="accent-band"></div>
+  <div class="header">
+    <div class="brand">
+      GLOBTRADE S.A.
+      <small>Comercio internacional · Distribución B2B</small>
+    </div>
+    <div class="doc-meta">
+      <h1>{{ titulo }}</h1>
+      {% if numero and numero not in ['—', '-', ''] %}<p><strong>{{ numero }}</strong></p>{% endif %}
+      {% if fecha and fecha not in ['—', '-', ''] %}<p>{{ fecha }}</p>{% elif fecha_generacion and not numero %}<p>Generado: {{ fecha_generacion }}</p>{% endif %}
+    </div>
+  </div>
+  {% block content %}{% endblock %}
+  <div class="footer">Documento generado electrónicamente — GlobalTrade S.A. · {{ fecha_generacion }}</div>
+</body>
+</html>

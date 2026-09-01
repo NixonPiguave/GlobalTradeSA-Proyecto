@@ -1,0 +1,15 @@
+---
+description: Calidad para frontend HTML, CSS y JavaScript
+globs: "**/*.{html,css,js}"
+alwaysApply: false
+---
+
+# Frontend Quality
+
+- Mantén el stack actual de HTML, CSS y JavaScript estático salvo que una spec justifique otro framework.
+- Conserva una experiencia clara para registro, login, perfil, catálogo, detalle de producto, dashboard y reportes.
+- Muestra estados de carga, éxito y error cuando una acción dependa de API o datos.
+- No dupliques lógica de endpoints o URLs sin revisar helpers existentes en `frontend/js/`.
+- Cuida responsive básico en pantallas principales de B2B y admin.
+- No ocultes errores silenciosamente en JavaScript; muestra feedback útil al usuario y registra detalles razonables en consola.
+- Evita cambios visuales grandes si la tarea es funcional, salvo que sean necesarios para completar el flujo.

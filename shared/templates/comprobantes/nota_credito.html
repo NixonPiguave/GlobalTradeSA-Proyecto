@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="section">
+  <h2>Nota de crédito</h2>
+  <div class="info-grid">
+    <div><strong>Cliente:</strong> {{ cliente.empresa }}</div>
+    <div><strong>Factura ref.:</strong> {{ factura_ref or '—' }}</div>
+    <div><strong>Motivo:</strong> {{ motivo or 'Devolución / ajuste' }}</div>
+    <div><strong>Monto NC:</strong> {{ total_fmt }}</div>
+  </div>
+</div>
+{% endblock %}

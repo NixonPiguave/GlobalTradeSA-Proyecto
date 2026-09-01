@@ -1,0 +1,16 @@
+---
+description: Calidad para especificaciones y planes de Spec Kit
+globs: "{specs,.specify}/**/*.md"
+alwaysApply: false
+---
+
+# Spec Kit Quality
+
+- Las specs deben explicar qué usuario necesita qué resultado y por qué aporta valor.
+- Separa claramente estado implementado, planificado y fuera de alcance.
+- Cada requisito funcional debe ser verificable mediante flujo UI, endpoint, dato, prueba o comando.
+- Para cambios con datos, declara entidades, reglas de negocio, duplicados, estados e impacto en DuckDB.
+- Para cambios con runtime, incluye validación de Docker, puertos y variables de entorno.
+- Los planes deben usar rutas reales del monorepo, no estructuras genéricas.
+- Las tareas deben ser pequeñas, accionables y con paths concretos.
+- No generes documentación extensa si no ayuda a implementar o verificar el sistema.

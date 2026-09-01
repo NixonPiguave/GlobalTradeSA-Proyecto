@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GlobMarket B2B — Portal Mayorista</title>
+    <meta name="description" content="Marketplace B2B de GLOBTRADE S.A. Compra por volumen con catálogo global." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui'],
+              display: ['Manrope', 'IBM Plex Sans', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="stylesheet" href="/css/app.css?v=81" />
+  </head>
+  <body class="font-sans text-slate-800">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+    <header class="gm-header sticky top-0 z-40"></header>
+
+    <main>
+      <section id="marketing-promos" class="hidden gm-promo-section">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-3">
+          <div class="gm-promo-strip">
+            <span class="gm-promo-label">Ofertas</span>
+            <div id="promo-chips" class="gm-promo-chips"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="gm-hero-band">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+          <div class="grid lg:grid-cols-2 gap-8 items-center">
+            <div>
+              <div class="gm-pill">Marketplace B2B · unitario y por volumen</div>
+              <h1 class="mt-4 font-display font-extrabold leading-tight">
+                Compra como lo necesites: desde 1 unidad o por volumen
+              </h1>
+              <p class="mt-3 text-base leading-7 max-w-xl">
+                Catálogo GLOBTRADE S.A.: compra unitaria o por volumen, filtros, favoritos y checkout.
+              </p>
+              <form id="hero-buscar" class="gm-search-bar mt-5 max-w-xl">
+                <input id="hero-q" type="search" placeholder="Busca: papel, cereal, detergente..." aria-label="Buscar" />
+                <button type="submit">Buscar</button>
+              </form>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <a href="/pages/catalogo.html" class="gm-hero-btn-solid gm-press inline-flex px-5 py-2.5">Explorar catálogo</a>
+                <a href="/pages/registro.html" class="gm-hero-btn-outline gm-press inline-flex px-5 py-2.5">Crear cuenta empresa</a>
+              </div>
+            </div>
+            <div id="gm-carrusel" class="gm-carrusel" aria-label="Productos destacados">
+              <div class="gm-carrusel-track" id="gm-carrusel-track"></div>
+              <button type="button" class="gm-carrusel-nav prev" id="gm-car-prev" aria-label="Anterior">‹</button>
+              <button type="button" class="gm-carrusel-nav next" id="gm-car-next" aria-label="Siguiente">›</button>
+              <div class="gm-carrusel-dots" id="gm-carrusel-dots"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="gm-banners" class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 hidden">
+        <div class="grid sm:grid-cols-2 gap-3" id="gm-banners-grid"></div>
+      </section>
+
+      <section class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex items-end justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-lg font-bold font-display" style="color:#3d4f6f">Categorías</h2>
+            <p class="text-sm text-slate-500 mt-0.5">Entra al catálogo filtrado por tipo de producto.</p>
+          </div>
+          <a href="/pages/catalogo.html" class="text-sm font-semibold hover:underline" style="color:#5b6fa8">Ver todo →</a>
+        </div>
+        <div id="categorias-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"></div>
+      </section>
+    </main>
+
+    <footer class="border-t mt-8" style="border-color:#d9d4e8;background:#fffcfe">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-xs text-slate-500 flex flex-wrap justify-between gap-2">
+        <span>© GLOBTRADE S.A. · GlobMarket</span>
+        <span>Sesión segura · Precios según volumen (retail o mayorista)</span>
+      </div>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/js/app.js?v=88"></script>
+    <script src="/js/carrito.js?v=81"></script>
+  </body>
+</html>

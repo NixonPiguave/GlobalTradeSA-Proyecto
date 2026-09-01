@@ -1,0 +1,15 @@
+---
+description: Reglas para Docker, compose y runtime local
+globs: "**/{Dockerfile*,*docker-compose*.yml,*.sh,run.py}"
+alwaysApply: false
+---
+
+# Docker And Runtime Quality
+
+- El runtime unificado debe mantener `http://localhost:8000` para analytics/admin y `http://localhost:8001` para B2B.
+- `docker-compose.unified.yml`, `Dockerfile.unified`, `run.py` y `docker/unified-entrypoint.sh` deben seguir coordinados.
+- Si ambos productos comparten DuckDB con escritura, deben correr en el proceso unificado para evitar locks entre procesos.
+- Los entrypoints deben inicializar datos de forma idempotente y fallar con mensajes claros.
+- Considera Windows + PowerShell + Docker Desktop al proponer comandos de ejecución.
+- No elimines compose individuales si siguen siendo útiles para ejecución aislada con bases separadas.
+- Tras cambios de runtime, verifica `docker compose -f docker-compose.unified.yml up --build -d` y ambos puertos.

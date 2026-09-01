@@ -1,0 +1,14 @@
+---
+description: Reglas base de calidad para GlobalTradeSA
+alwaysApply: true
+---
+
+# GlobalTradeSA Core
+
+- Usa Spec Kit como flujo activo: `.specify/` y `specs/`. No recrees OpenSpec ni comandos `opsx`.
+- Trata el repo como monorepo con dos productos activos: `apps/admin` (ERP/analytics) y `apps/portal` (marketplace B2B). Carpetas legacy solo referencia.
+- Mantén los cambios acotados al producto afectado; solo cruza límites cuando la spec indique integración.
+- Specs `001`–`006` y `002` están **Implemented** (roadmap Spec Kit por módulos). No presentes como planificado lo ya verificable (carrito, checkout, pedidos, PDF, reportes, ClickHouse/Airflow, gobierno de roles). Fuera de alcance: pasarelas reales, Kubernetes productivo, ML entrenado, multi-empresa.
+- Toda funcionalidad relevante debe poder verificarse por navegador, endpoint, consulta DuckDB/ClickHouse, prueba o comando reproducible.
+- Prioriza que el sistema arranque y funcione sobre cambios meramente documentales o cosméticos.
+- Trabajo nuevo: actualizar o crear spec en `specs/` antes de implementar.

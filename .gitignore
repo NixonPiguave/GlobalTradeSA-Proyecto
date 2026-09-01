@@ -1,0 +1,54 @@
+# Secretos (usar .env.example como plantilla)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Entornos Python (se recrean con pip install -r requirements.txt)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# DuckDB — generar con shared/database/init_sistema.py (no versionar)
+*.duckdb
+*.duckdb.*
+db/*.pdf
+db/*.bak*
+db/*.broken
+db/*.pre_regen*
+
+# PocketBase legacy (binarios y datos locales)
+**/pocketbase.exe
+**/pocketbase/pb_data/
+
+# Artefactos generados en runtime
+shared/storage/comprobantes/
+shared/storage/reportes/
+tmp_test.pdf
+tmp/
+
+# Logos de empresa subidos desde el panel (runtime)
+shared/storage/uploads/empresa/
+
+# Node
+node_modules/
+dist/
+build/
+.next/
+.nuxt/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+.cursor/settings.json
+
+# Logs y temporales
+*.log
+*.cache/

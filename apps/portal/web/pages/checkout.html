@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Checkout — GlobMarket B2B</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: { fontFamily: { sans: ['IBM Plex Sans', 'ui-sans-serif', 'system-ui'], display: ['Manrope', 'IBM Plex Sans', 'sans-serif'] } } } };
+    </script>
+    <link rel="stylesheet" href="/css/app.css?v=85" />
+  </head>
+
+  <body class="font-sans bg-slate-50 text-slate-800">
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+    <header class="gm-header sticky top-0 z-40"></header>
+
+    <main class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10">
+      <ol class="flex items-center gap-3 text-sm font-semibold mb-8 flex-wrap" id="steps-bar">
+        <li data-step-dot="1" class="flex items-center gap-2"><span class="h-7 w-7 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">1</span> Revisión</li>
+        <li class="flex-1 h-px bg-slate-200 min-w-[1rem]"></li>
+        <li data-step-dot="2" class="flex items-center gap-2 text-slate-400"><span class="h-7 w-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs">2</span> Entrega</li>
+        <li class="flex-1 h-px bg-slate-200 min-w-[1rem]"></li>
+        <li data-step-dot="3" class="flex items-center gap-2 text-slate-400"><span class="h-7 w-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs">3</span> Pago</li>
+      </ol>
+
+      <div class="grid lg:grid-cols-3 gap-8 items-start">
+        <div class="lg:col-span-2 space-y-6" id="checkout-main">
+
+          <!-- Paso 1 -->
+          <section id="step-1">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h1 class="text-2xl font-extrabold text-slate-900 font-display">Revisa tu pedido</h1>
+                <p class="mt-1 text-sm text-slate-600">Confirma cantidades, precios mayoristas y disponibilidad en tu zona.</p>
+              </div>
+              <div id="chk-empresa" class="text-sm text-slate-600 rounded-xl border border-slate-200 bg-white px-4 py-2 hidden"></div>
+            </div>
+            <div id="chk-zona-banner" class="mt-4 hidden rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900"></div>
+            <div id="chk-items" class="mt-5 space-y-3"></div>
+            <div id="chk-msg-1" class="hidden mt-3"></div>
+            <div class="mt-6 flex flex-wrap justify-between gap-3">
+              <button id="ver-carrito" type="button" class="px-5 py-3 rounded-xl border border-slate-200 bg-white font-semibold hover:border-blue-200 transition">Ver carrito</button>
+              <div class="flex flex-wrap gap-3">
+                <a href="/pages/catalogo.html" class="px-5 py-3 rounded-xl border border-slate-200 bg-white font-semibold hover:border-blue-200 transition">Seguir comprando</a>
+                <button id="to-step-2" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Continuar</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Paso 2 -->
+          <section id="step-2" class="hidden">
+            <h1 class="text-2xl font-extrabold text-slate-900 font-display">Entrega y facturación</h1>
+            <p class="mt-1 text-sm text-slate-600">Indica dónde recibir la mercancía. El país define la bodega de despacho y transportistas disponibles.</p>
+            <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-6 space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-slate-700">Dirección guardada</label>
+                <select id="chk-dir-saved" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3">
+                  <option value="">Escribir dirección nueva…</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-700">Dirección de entrega *</label>
+                <input id="chk-direccion" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-200" placeholder="Av. Industrial 1234, Parque Logístico" />
+              </div>
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700">Ciudad</label>
+                  <input id="chk-ciudad" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3" placeholder="Lima" />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700">País de entrega *</label>
+                  <select id="chk-pais" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3"></select>
+                </div>
+              </div>
+              <div id="chk-envio-info" class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 hidden"></div>
+              <div class="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700">Teléfono de contacto en almacén</label>
+                  <input id="chk-telefono" type="tel" maxlength="20" inputmode="tel" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3" placeholder="+51 999 123 456" />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-slate-700">Referencia de pedido interno (PI)</label>
+                  <input id="chk-ref-interna" maxlength="40" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3" placeholder="PI-2026-0042" />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-700">Instrucciones de recepción</label>
+                <textarea id="chk-notas" rows="3" maxlength="500" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3" placeholder="Horario de recepción, muelle, persona que firma conforme…"></textarea>
+              </div>
+              <div id="chk-msg-2" class="hidden"></div>
+            </div>
+            <div class="mt-6 flex justify-between gap-3">
+              <button id="back-step-1" type="button" class="px-5 py-3 rounded-xl border border-slate-200 bg-white font-semibold hover:border-blue-200 transition">Volver</button>
+              <button id="to-step-3" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Confirmar pedido</button>
+            </div>
+          </section>
+
+          <!-- Paso 3 -->
+          <section id="step-3" class="hidden">
+            <h1 class="text-2xl font-extrabold text-slate-900 font-display">Pago seguro</h1>
+            <p class="mt-1 text-sm text-slate-600">Entorno de demostración B2B — no se realiza un cargo real a tu tarjeta.</p>
+            <div class="mt-5 rounded-2xl border border-slate-200 bg-white p-6">
+              <div class="flex flex-wrap gap-4 text-sm border-b border-slate-100 pb-4 mb-5">
+                <div><span class="text-slate-500">Pedido</span> <span id="pay-numero" class="font-bold text-slate-900 ml-1">—</span></div>
+                <div><span class="text-slate-500">Total</span> <span id="pay-total" class="font-bold text-blue-700 text-lg ml-1">—</span></div>
+              </div>
+              <label class="block text-sm font-semibold text-slate-700">Método de pago</label>
+              <select id="pay-metodo" class="mt-1 w-full max-w-md rounded-xl border border-slate-200 px-4 py-3">
+                <option value="tarjeta">Tarjeta de crédito / débito</option>
+                <option value="transferencia">Transferencia bancaria</option>
+                <option value="credito_interno">Crédito interno B2B</option>
+              </select>
+
+              <div id="pay-tarjeta-fields" class="mt-6 grid md:grid-cols-2 gap-8 items-start">
+                <div class="cc-scene-wrap order-2 md:order-1">
+                  <div class="cc-scene">
+                    <div class="cc-card" id="cc-card">
+                      <div class="cc-face cc-front">
+                        <div class="cc-top">
+                          <div class="cc-chip"></div>
+                          <span class="cc-brand" id="cc-brand">VISA</span>
+                        </div>
+                        <div class="cc-number" id="cc-display-number">•••• •••• •••• ••••</div>
+                        <div class="cc-bottom">
+                          <div class="cc-bottom-block">
+                            <div class="cc-label">Titular</div>
+                            <div class="cc-value cc-name" id="cc-display-name">TU NOMBRE</div>
+                          </div>
+                          <div class="cc-bottom-block cc-exp-block">
+                            <div class="cc-label">Vence</div>
+                            <div class="cc-value" id="cc-display-exp">MM/AA</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="cc-face cc-back">
+                        <div class="cc-stripe"></div>
+                        <div class="cc-label">CVV</div>
+                        <div class="cc-cvv-box" id="cc-display-cvv">•••</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="space-y-3 order-1 md:order-2">
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Nombre en la tarjeta</label>
+                    <input id="pay-name" type="text" autocomplete="cc-name" maxlength="40"
+                      class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 uppercase tracking-wide" placeholder="EMPRESA SAC" />
+                  </div>
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700">Número de tarjeta</label>
+                    <input id="pay-card" type="text" inputmode="numeric" autocomplete="cc-number" maxlength="19"
+                      placeholder="4111 1111 1111 1111"
+                      class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-mono tracking-wider" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">Vencimiento</label>
+                      <input id="pay-exp" type="text" inputmode="numeric" autocomplete="cc-exp" maxlength="5"
+                        placeholder="12/28" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-mono" />
+                    </div>
+                    <div>
+                      <label class="text-sm font-semibold text-slate-700">CVV</label>
+                      <input id="pay-cvv" type="password" inputmode="numeric" autocomplete="cc-csc" maxlength="3"
+                        placeholder="123" class="mt-1 w-full rounded-xl border border-slate-200 px-4 py-3 font-mono" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="pay-alt-info" class="hidden mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                Al confirmar, generaremos la orden de compra y el comprobante. Un asesor validará transferencia o crédito interno.
+              </div>
+
+              <div id="pay-processing" class="hidden mt-6 text-center py-6">
+                <div class="inline-block h-10 w-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin"></div>
+                <p class="mt-3 text-sm text-slate-600">Procesando pago…</p>
+              </div>
+              <button id="pay-btn" class="mt-6 w-full max-w-md rounded-xl bg-emerald-600 text-white px-4 py-3 font-semibold hover:bg-emerald-700 transition">Confirmar pago</button>
+              <div id="chk-msg-3" class="hidden mt-3"></div>
+            </div>
+            <div class="mt-6">
+              <button id="back-step-2" type="button" class="px-5 py-3 rounded-xl border border-slate-200 bg-white font-semibold hover:border-blue-200 transition">Volver a entrega</button>
+            </div>
+          </section>
+
+          <!-- Éxito -->
+          <section id="step-ok" class="hidden text-center py-10">
+            <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-2xl font-bold">✓</div>
+            <h1 class="mt-4 text-2xl font-extrabold text-slate-900">Pago aprobado</h1>
+            <p class="mt-2 text-slate-600">Pedido <span id="ok-numero" class="font-bold text-slate-900"></span> confirmado. Despacho desde la bodega asignada a tu zona.</p>
+            <div id="ok-comprobantes" class="mt-6 flex flex-wrap justify-center gap-3"></div>
+            <div class="mt-6 flex flex-wrap justify-center gap-3">
+              <a href="/pages/mis-pedidos.html" class="px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition">Ver mis pedidos</a>
+              <a href="/pages/catalogo.html" class="px-6 py-3 rounded-xl border border-slate-200 bg-white font-semibold hover:border-blue-200 transition">Seguir comprando</a>
+            </div>
+          </section>
+        </div>
+
+        <!-- Resumen lateral -->
+        <aside class="lg:col-span-1 checkout-aside-sticky">
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wide">Resumen</h2>
+            <div id="aside-items" class="mt-4 space-y-2 text-sm max-h-48 overflow-y-auto"></div>
+            <div class="mt-4 pt-4 border-t border-slate-100 space-y-2 text-sm">
+              <div class="flex justify-between"><span class="text-slate-600">Subtotal</span><span id="aside-subtotal" class="font-semibold">$0.00</span></div>
+              <div id="aside-desc-row" class="hidden flex justify-between text-emerald-700">
+                <span>Descuento</span><span id="aside-descuento" class="font-semibold">−$0.00</span>
+              </div>
+              <div class="flex justify-between"><span class="text-slate-600">IVA (<span id="aside-iva">18</span>%)</span><span id="aside-impuesto" class="font-semibold">$0.00</span></div>
+              <div id="aside-envio-row" class="hidden flex justify-between"><span class="text-slate-600">Envío</span><span id="aside-envio" class="font-semibold">—</span></div>
+              <div class="flex justify-between text-base pt-2 border-t border-slate-200">
+                <span class="font-extrabold">Total</span><span id="aside-total" class="font-extrabold text-blue-700">$0.00</span>
+              </div>
+            </div>
+            <p class="mt-4 text-xs text-slate-500 leading-relaxed">Precios mayoristas congelados al agregar al carrito. Factura electrónica en USD tras el pago.</p>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="/js/app.js?v=88"></script>
+    <script src="/js/carrito.js?v=86"></script>
+    <script>
+      (function () {
+        if (!getToken()) { window.location.href = '/pages/login.html'; return; }
+        let pedido = null;
+        let checkoutHecho = false;
+        let cartSnapshot = null;
+        let costoEnvioRef = 0;
+
+        function firmaCarrito(c) {
+          return JSON.stringify((c?.items || []).map((i) => `${i.id_producto}:${i.cantidad}:${i.precio}`).sort());
+        }
+
+        function irPaso(n) {
+          [1, 2, 3].forEach((i) => {
+            document.getElementById(`step-${i}`)?.classList.toggle('hidden', i !== n);
+            const dot = document.querySelector(`[data-step-dot="${i}"]`);
+            if (dot) {
+              const circle = dot.querySelector('span');
+              const activo = i <= n;
+              dot.classList.toggle('text-slate-400', !activo);
+              circle.className = `h-7 w-7 rounded-full ${activo ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'} flex items-center justify-center text-xs`;
+            }
+          });
+          document.getElementById('step-ok').classList.add('hidden');
+        }
+
+        function actualizarAside(c) {
+          if (!c) return;
+          const asideItems = document.getElementById('aside-items');
+          asideItems.innerHTML = (c.items || []).map((i) => `
+            <div class="flex justify-between gap-2">
+              <span class="text-slate-700 truncate">${escapeHtml(nombreProductoEs(i.nombre_producto))} ×${i.cantidad}</span>
+              <span class="font-medium shrink-0">${formatUsd(i.subtotal)}</span>
+            </div>`).join('') || '<span class="text-slate-500">Carrito vacío</span>';
+          const subtotal = c.subtotal ?? c.total;
+          document.getElementById('aside-subtotal').textContent = formatUsd(subtotal);
+          const desc = c.descuento_monto || 0;
+          const descRow = document.getElementById('aside-desc-row');
+          if (desc > 0) {
+            descRow.classList.remove('hidden'); descRow.classList.add('flex');
+            document.getElementById('aside-descuento').textContent = `−${formatUsd(desc)}`;
+          } else { descRow.classList.add('hidden'); descRow.classList.remove('flex'); }
+          if (c.iva_pct != null) document.getElementById('aside-iva').textContent = String(c.iva_pct);
+          document.getElementById('aside-impuesto').textContent = formatUsd(c.impuesto ?? 0);
+          const envRow = document.getElementById('aside-envio-row');
+          if (costoEnvioRef > 0) {
+            envRow?.classList.remove('hidden');
+            envRow?.classList.add('flex');
+            document.getElementById('aside-envio').textContent = formatUsd(costoEnvioRef);
+          } else {
+            envRow?.classList.add('hidden');
+            envRow?.classList.remove('flex');
+          }
+          const baseTotal = c.total_con_iva ?? c.total ?? subtotal;
+          document.getElementById('aside-total').textContent = formatUsd(baseTotal + costoEnvioRef);
+        }
+
+        async function renderRevision() {
+          const cont = document.getElementById('chk-items');
+          const btn2 = document.getElementById('to-step-2');
+          try {
+            const [c, cuenta] = await Promise.all([
+              apiFetch('/api/carrito', { auth: true }),
+              apiFetch('/api/cuenta/resumen', { auth: true }).catch(() => null),
+            ]);
+            cartSnapshot = c;
+            actualizarAside(c);
+
+            const emp = document.getElementById('chk-empresa');
+            if (cuenta?.cliente?.nombre_empresa) {
+              emp.classList.remove('hidden');
+              emp.innerHTML = `<strong>${escapeHtml(cuenta.cliente.nombre_empresa)}</strong> · ${escapeHtml(cuenta.cliente.pais || '')}`;
+            }
+            const zona = document.getElementById('chk-zona-banner');
+            if (c.zona_label) {
+              zona.classList.remove('hidden');
+              zona.innerHTML = `<strong>Despacho:</strong> ${escapeHtml(c.zona_label)}${c.bodega_asignada ? ` · Bodega #${c.bodega_asignada}` : ''}`;
+            }
+            if (cuenta?.cliente?.telefono) {
+              const tel = document.getElementById('chk-telefono');
+              if (tel && !tel.value) tel.value = cuenta.cliente.telefono;
+            }
+
+            if (!c.items.length) {
+              cont.innerHTML = '<div class="rounded-2xl border border-slate-200 bg-white p-6 text-slate-600">Tu carrito está vacío. <a class="text-blue-700 font-semibold" href="/pages/catalogo.html">Ir al catálogo</a></div>';
+              btn2.disabled = true;
+              btn2.classList.add('opacity-50', 'cursor-not-allowed');
+              return;
+            }
+            const sinStock = c.items.filter((i) => i.stock_disponible < i.cantidad);
+            if (sinStock.length) {
+              btn2.disabled = true;
+              btn2.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+              btn2.disabled = false;
+              btn2.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            cont.innerHTML = c.items.map((i) => {
+              const okStock = i.stock_disponible >= i.cantidad;
+              return `
+              <div class="rounded-2xl border border-slate-200 bg-white p-4 flex gap-4">
+                <div class="h-16 w-16 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden shrink-0">
+                  ${i.imagen_url ? `<img src="${escapeHtml(i.imagen_url)}" class="h-full w-full object-cover" alt="">` : ''}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="font-semibold text-slate-900">${escapeHtml(nombreProductoEs(i.nombre_producto))}</div>
+                  <div class="text-xs text-slate-500 mt-0.5">${escapeHtml(i.sku || '')}${i.categoria ? ` · ${escapeHtml(i.categoria)}` : ''}</div>
+                  <div class="text-sm text-slate-600 mt-1">${i.cantidad} u. × ${formatUsd(i.precio)}</div>
+                  <span class="inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded-full ${okStock ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}">
+                    ${okStock ? 'Stock OK en tu zona' : `Solo ${Math.floor(i.stock_disponible)} disp.`}
+                  </span>
+                </div>
+                <div class="font-bold text-slate-900 shrink-0">${formatUsd(i.subtotal)}</div>
+              </div>`;
+            }).join('');
+          } catch (e) {
+            cont.innerHTML = `<div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700">${escapeHtml(e.message)}</div>`;
+            btn2.disabled = true;
+            btn2.classList.add('opacity-50', 'cursor-not-allowed');
+          }
+        }
+
+        document.getElementById('to-step-2').addEventListener('click', () => {
+          if (document.getElementById('to-step-2').disabled) {
+            setInlineMessage('chk-msg-1', 'error', 'Hay productos sin stock suficiente en tu zona. Ajusta cantidades antes de continuar.');
+            return;
+          }
+          irPaso(2);
+        });
+
+        (async function cargarDireccionesGuardadas() {
+          const sel = document.getElementById('chk-dir-saved');
+          const paisSel = document.getElementById('chk-pais');
+          if (typeof listarPaisesSelect === 'function' && paisSel) {
+            await listarPaisesSelect('#chk-pais', '');
+          }
+          async function refreshEnvio() {
+            const box = document.getElementById('chk-envio-info');
+            if (!box) return;
+            const pais = paisSel?.value || '';
+            try {
+              const q = pais ? `?pais=${encodeURIComponent(pais)}` : '';
+              const info = await apiFetch(`/api/cuenta/envio-estimado${q}`, { auth: true });
+              box.classList.remove('hidden');
+              if (!info.macro_zona) {
+                box.textContent = info.mensaje || 'Seleccione un país de entrega.';
+                costoEnvioRef = 0;
+                if (cartSnapshot) actualizarAside(cartSnapshot);
+                return;
+              }
+              const carriers = (info.transportistas || []).map((t) => t.nombre).join(', ') || '—';
+              const costo = info.costo_estimado != null ? formatUsd(info.costo_estimado) : '—';
+              costoEnvioRef = info.costo_estimado != null ? Number(info.costo_estimado) : 0;
+              box.innerHTML = `<strong>Cobertura logística</strong><br>
+                ${escapeHtml(info.pais || pais)} → ${escapeHtml(info.macro_label || '')}<br>
+                Transportistas: ${escapeHtml(carriers)}<br>
+                Plazo estimado: 3–7 días hábiles según macro-zona · Tarifa base: ${costo}`;
+              if (cartSnapshot) actualizarAside(cartSnapshot);
+            } catch (e) {
+              box.classList.remove('hidden');
+              box.textContent = e.message || 'Sin cobertura logística.';
+            }
+          }
+          paisSel?.addEventListener('change', () => { void refreshEnvio(); });
+          if (!sel) { void refreshEnvio(); return; }
+          try {
+            const data = await apiFetch('/api/cuenta/direcciones', { auth: true });
+            const items = (data.items || []).filter((d) => d.tipo !== 'facturacion');
+            items.forEach((d) => {
+              const opt = document.createElement('option');
+              opt.value = String(d.id_direccion);
+              opt.textContent = `${d.alias || 'Dirección'} — ${d.direccion}${d.ciudad ? ', ' + d.ciudad : ''}${d.pais ? ' · ' + d.pais : ''}`;
+              opt.dataset.direccion = d.direccion || '';
+              opt.dataset.ciudad = d.ciudad || '';
+              opt.dataset.pais = d.pais || '';
+              if (d.es_principal) opt.selected = true;
+              sel.appendChild(opt);
+            });
+            const apply = () => {
+              const opt = sel.selectedOptions[0];
+              if (!opt || !opt.value) return;
+              document.getElementById('chk-direccion').value = opt.dataset.direccion || '';
+              document.getElementById('chk-ciudad').value = opt.dataset.ciudad || '';
+              if (paisSel && opt.dataset.pais) {
+                [...paisSel.options].forEach((o) => {
+                  if (o.value.toLowerCase() === String(opt.dataset.pais).toLowerCase()) paisSel.value = o.value;
+                });
+              }
+              void refreshEnvio();
+            };
+            sel.addEventListener('change', apply);
+            if (sel.value) apply();
+            else {
+              const cuenta = await apiFetch('/api/cuenta/resumen', { auth: true }).catch(() => null);
+              if (cuenta?.cliente?.direccion) document.getElementById('chk-direccion').value = cuenta.cliente.direccion;
+              if (cuenta?.cliente?.pais && paisSel) {
+                [...paisSel.options].forEach((o) => {
+                  if (o.value.toLowerCase() === String(cuenta.cliente.pais).toLowerCase()) paisSel.value = o.value;
+                });
+              }
+              void refreshEnvio();
+            }
+          } catch (_) { void refreshEnvio(); }
+        })();
+
+        document.getElementById('back-step-1').addEventListener('click', () => irPaso(1));
+        document.getElementById('back-step-2').addEventListener('click', () => irPaso(2));
+        document.getElementById('ver-carrito')?.addEventListener('click', () => {
+          if (window.gmCarrito) window.gmCarrito.toggleDrawer();
+        });
+
+        document.getElementById('to-step-3').addEventListener('click', async () => {
+          const direccion = document.getElementById('chk-direccion').value.trim();
+          const pais = document.getElementById('chk-pais')?.value?.trim() || '';
+          if (direccion.length < 5) {
+            setInlineMessage('chk-msg-2', 'error', 'Ingresa una dirección de entrega válida.');
+            return;
+          }
+          if (!pais) {
+            setInlineMessage('chk-msg-2', 'error', 'Selecciona el país de entrega.');
+            return;
+          }
+          const telCheck = validarTelefono(document.getElementById('chk-telefono').value);
+          if (!telCheck.ok) {
+            setInlineMessage('chk-msg-2', 'error', telCheck.msg);
+            return;
+          }
+          let notas = document.getElementById('chk-notas').value.trim() || '';
+          const refInterna = document.getElementById('chk-ref-interna').value.trim();
+          const tel = telCheck.value;
+          if (tel) notas = (notas ? notas + ' | ' : '') + `Contacto: ${tel}`;
+          if (refInterna) notas = (notas ? notas + ' | ' : '') + `Ref. PI: ${refInterna}`;
+          if (notas.length > 500) {
+            setInlineMessage('chk-msg-2', 'error', 'Las notas superan el límite de 500 caracteres.');
+            return;
+          }
+          const btn = document.getElementById('to-step-3');
+          setButtonLoading(btn, true, 'Confirmando…');
+          try {
+            pedido = await apiFetch('/api/pedidos/checkout', {
+              method: 'POST', auth: true,
+              body: {
+                direccion_entrega: direccion,
+                ciudad: document.getElementById('chk-ciudad').value.trim() || null,
+                pais,
+                notas: notas || null,
+              },
+            });
+            checkoutHecho = true;
+            cartSnapshot = await apiFetch('/api/carrito', { auth: true });
+            document.getElementById('pay-numero').textContent = pedido.numero;
+            document.getElementById('pay-total').textContent = formatUsd(pedido.total);
+            irPaso(3);
+          } catch (e) {
+            setInlineMessage('chk-msg-2', 'error', e.message);
+          } finally {
+            setButtonLoading(btn, false);
+          }
+        });
+
+        function soloDigitos(s) { return String(s || '').replace(/\D/g, ''); }
+        function formatearTarjeta(raw) {
+          const d = soloDigitos(raw).slice(0, 16);
+          return d.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+        }
+        function formatearExp(raw) {
+          const d = soloDigitos(raw).slice(0, 4);
+          if (d.length <= 2) return d;
+          return `${d.slice(0, 2)}/${d.slice(2)}`;
+        }
+        function tarjetaSimulacionOk(num) { return soloDigitos(num).length === 16; }
+        function expFormatoValido(exp) {
+          if (!/^\d{2}\/\d{2}$/.test(exp)) return false;
+          const mm = Number(exp.slice(0, 2));
+          return mm >= 1 && mm <= 12;
+        }
+        function tarjetaVencida(exp) {
+          if (!expFormatoValido(exp)) return false;
+          const mm = Number(exp.slice(0, 2));
+          const yy = Number(exp.slice(3, 5));
+          const expYm = (2000 + yy) * 12 + mm;
+          const now = new Date();
+          const nowYm = now.getFullYear() * 12 + (now.getMonth() + 1);
+          return expYm < nowYm;
+        }
+        function detectarMarca(num) {
+          const d = soloDigitos(num);
+          if (d.startsWith('4')) return 'VISA';
+          if (/^5[1-5]/.test(d) || /^2[2-7]/.test(d)) return 'MASTERCARD';
+          if (d.startsWith('3')) return 'AMEX';
+          return 'TARJETA';
+        }
+
+        const ccCard = document.getElementById('cc-card');
+        const payCard = document.getElementById('pay-card');
+        const payExp = document.getElementById('pay-exp');
+        const payCvv = document.getElementById('pay-cvv');
+        const payName = document.getElementById('pay-name');
+
+        function formatearNumeroTarjetaDisplay(raw) {
+          const d = soloDigitos(raw);
+          if (!d) return '•••• •••• •••• ••••';
+          const grupos = [];
+          for (let i = 0; i < 16; i += 4) {
+            const slice = d.slice(i, i + 4);
+            grupos.push(slice.length === 4 ? slice : slice.padEnd(4, '•'));
+          }
+          return grupos.join(' ');
+        }
+
+        function syncCardPreview() {
+          document.getElementById('cc-display-number').textContent = formatearNumeroTarjetaDisplay(payCard?.value || '');
+          document.getElementById('cc-display-name').textContent = (payName?.value || 'TU NOMBRE').trim().toUpperCase() || 'TU NOMBRE';
+          document.getElementById('cc-display-exp').textContent = payExp?.value || 'MM/AA';
+          const cvv = payCvv?.value || '';
+          document.getElementById('cc-display-cvv').textContent = cvv ? cvv : '•••';
+          document.getElementById('cc-brand').textContent = detectarMarca(payCard?.value || '');
+        }
+
+        function updatePayMethodUI() {
+          const metodo = document.getElementById('pay-metodo')?.value || 'tarjeta';
+          const tarjeta = metodo === 'tarjeta';
+          document.getElementById('pay-tarjeta-fields')?.classList.toggle('hidden', !tarjeta);
+          const alt = document.getElementById('pay-alt-info');
+          if (!alt) return;
+          alt.classList.toggle('hidden', tarjeta);
+          if (tarjeta) return;
+          if (metodo === 'transferencia') {
+            alt.innerHTML = `
+              <p class="font-semibold text-slate-900 mb-2">Transferencia bancaria</p>
+              <p class="text-slate-600">Al confirmar generamos el pedido y comprobante. Realiza la transferencia con estos datos:</p>
+              <ul class="mt-2 space-y-1 text-slate-700">
+                <li><strong>Banco:</strong> Banco Demo Andino</li>
+                <li><strong>Cuenta:</strong> 0011-0456-7890123456 (USD)</li>
+                <li><strong>CCI:</strong> 011-456-00078901234567</li>
+                <li><strong>Referencia:</strong> número de pedido</li>
+              </ul>
+              <p class="mt-2 text-xs text-slate-500">Un asesor validará el abono en 24–48 h hábiles.</p>`;
+          } else {
+            alt.innerHTML = `
+              <p class="font-semibold text-slate-900 mb-2">Crédito interno B2B</p>
+              <p class="text-slate-600">Usa tu línea de crédito aprobada con GlobalTrade. El pedido queda en estado <strong>pendiente de validación</strong> hasta confirmar cupo disponible.</p>
+              <p class="mt-2 text-xs text-slate-500">Ideal para clientes con contrato marco y facturación a 30/60 días.</p>`;
+          }
+        }
+        function flipCard(on) { ccCard?.classList.toggle('is-flipped', !!on); }
+
+        payName?.addEventListener('input', syncCardPreview);
+        payCard?.addEventListener('input', () => {
+          const pos = payCard.selectionStart;
+          const before = payCard.value.length;
+          payCard.value = formatearTarjeta(payCard.value);
+          try { payCard.setSelectionRange(Math.max(0, (pos || 0) + payCard.value.length - before), Math.max(0, (pos || 0) + payCard.value.length - before)); } catch (_) {}
+          syncCardPreview();
+        });
+        payExp?.addEventListener('input', () => { payExp.value = formatearExp(payExp.value); syncCardPreview(); });
+        payCvv?.addEventListener('input', () => { payCvv.value = soloDigitos(payCvv.value).slice(0, 3); syncCardPreview(); });
+        payCvv?.addEventListener('focus', () => flipCard(true));
+        payCvv?.addEventListener('blur', () => flipCard(false));
+
+        document.getElementById('pay-metodo')?.addEventListener('change', updatePayMethodUI);
+
+        document.getElementById('pay-btn').addEventListener('click', async () => {
+          if (!pedido) return;
+          const carritoActual = await apiFetch('/api/carrito', { auth: true }).catch(() => null);
+          if (cartSnapshot && carritoActual && firmaCarrito(cartSnapshot) !== firmaCarrito(carritoActual)) {
+            setInlineMessage('chk-msg-3', 'error', 'El carrito cambió después de confirmar el pedido. Vuelve al paso de entrega y confirma de nuevo.');
+            return;
+          }
+          const btn = document.getElementById('pay-btn');
+          const proc = document.getElementById('pay-processing');
+          const metodo = document.getElementById('pay-metodo').value;
+          let ultimos = null;
+          let referencia = null;
+          if (metodo === 'tarjeta') {
+            const card = soloDigitos(payCard.value);
+            const exp = payExp.value.trim();
+            const cvv = soloDigitos(payCvv.value);
+            if (!tarjetaSimulacionOk(card)) {
+              setInlineMessage('chk-msg-3', 'error', 'Número de tarjeta incompleto (16 dígitos).');
+              return;
+            }
+            if (!expFormatoValido(exp)) {
+              setInlineMessage('chk-msg-3', 'error', 'Vencimiento inválido (MM/AA).');
+              return;
+            }
+            if (tarjetaVencida(exp)) {
+              setInlineMessage('chk-msg-3', 'error', 'Esta tarjeta ha vencido. Usa otra tarjeta o elige otro método de pago.');
+              return;
+            }
+            if (!/^\d{3}$/.test(cvv)) {
+              setInlineMessage('chk-msg-3', 'error', 'CVV inválido.');
+              return;
+            }
+            ultimos = card.slice(-4);
+            referencia = `CARD-${ultimos}-${Date.now().toString(36).slice(-6).toUpperCase()}`;
+          } else {
+            referencia = `${metodo.toUpperCase()}-${Date.now().toString(36).slice(-8).toUpperCase()}`;
+          }
+          btn.classList.add('hidden');
+          proc.classList.remove('hidden');
+          await new Promise((r) => setTimeout(r, 1800 + Math.random() * 1200));
+          try {
+            const res = await apiFetch('/api/pedidos/pagar', {
+              method: 'POST', auth: true,
+              body: { id_pedido: pedido.id_pedido, metodo, referencia, ultimos_digitos: ultimos },
+            });
+            proc.classList.add('hidden');
+            if (res.aprobado === false || res.pago?.estado === 'rechazado') {
+              if (res.pendiente_validacion || res.pago?.estado === 'pendiente_validacion') {
+                if (window.gmCarrito) window.gmCarrito.cargarCarrito();
+                sessionStorage.setItem('gm-pago-ok', JSON.stringify({
+                  numero: res.pedido.numero,
+                  id_pedido: res.pedido.id_pedido,
+                  pendiente: true,
+                  mensaje: res.pago?.motivo || 'Pago registrado. Pendiente de validación.',
+                }));
+                window.location.assign(`/pages/mis-pedidos.html?pedido=${res.pedido.id_pedido}`);
+                return;
+              }
+              btn.classList.remove('hidden');
+              setInlineMessage('chk-msg-3', 'error', res.pago?.motivo || 'Pago rechazado.');
+              return;
+            }
+            if (window.gmCarrito) window.gmCarrito.cargarCarrito();
+            sessionStorage.setItem('gm-pago-ok', JSON.stringify({
+              numero: res.pedido.numero,
+              id_pedido: res.pedido.id_pedido,
+            }));
+            window.location.assign(`/pages/mis-pedidos.html?pedido=${res.pedido.id_pedido}`);
+            return;
+          } catch (e) {
+            proc.classList.add('hidden');
+            btn.classList.remove('hidden');
+            setInlineMessage('chk-msg-3', 'error', e.message);
+          }
+        });
+
+        renderRevision();
+        syncCardPreview();
+        updatePayMethodUI();
+      })();
+    </script>
+  </body>
+</html>

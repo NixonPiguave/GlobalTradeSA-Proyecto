@@ -1,0 +1,40 @@
+# Runtime unificado LEGACY (reemplazado por docker-compose.full.yml).
+#
+# NO usar este archivo en el flujo habitual: genera el contenedor huérfano
+# `globaltrade-unified` que choca en el puerto 8000 con `globaltrade-apps`.
+#
+# Stack vigente:
+#   docker compose -f docker-compose.full.yml up --build -d
+#
+# Si aún tienes contenedores antiguos:
+#   docker rm -f globaltrade-unified
+#   docker compose -f docker-compose.unified.yml down --remove-orphans
+
+services:
+  globaltrade-unified:
+    profiles: ["legacy-unified"]
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.unified
+    container_name: globaltrade-unified
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    environment:
+      DUCKDB_PATH: /app/db/globtrade.duckdb
+      PARQUET_PATH: /app/data/ventas.parquet
+      JWT_SECRET: "dev-secret-change-me"
+      JWT_ALGORITHM: "HS256"
+      JWT_EXPIRE_MINUTES: "60"
+      CORS_ORIGINS: "http://localhost:8001,http://127.0.0.1:8001"
+      POCKETBASE_SYNC_ON_STARTUP: "false"
+      IA_API_KEY: ${IA_API_KEY}
+      IA_BASE_URL: ${IA_BASE_URL:-https://api.groq.com/openai/v1}
+      IA_MODEL: ${IA_MODEL:-llama-3.3-70b-versatile}
+      CLICKHOUSE_HOST: ${CLICKHOUSE_HOST:-127.0.0.1}
+      CLICKHOUSE_PORT: ${CLICKHOUSE_PORT:-8123}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB:-globtrade_dwh}
+    volumes:
+      - ./db:/app/db
+      - ./shared/storage:/app/shared/storage
+    restart: "no"
